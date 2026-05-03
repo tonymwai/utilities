@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Utility Tracker" />
+<title>Utility Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.10);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text2: #5a5a54;
+    --text3: #9a9a90;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --blue-text: #0C447C;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --amber-text: #633806;
+    --green-bg: #EAF3DE;
+    --green-text: #27500A;
+    --green-border: #97C459;
+    --red-bg: #FCEBEB;
+    --red-text: #791F1F;
+    --red-border: #F09595;
+    --warn-bg: #FAEEDA;
+    --warn-text: #633806;
+    --warn-border: #FAC775;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #181816;
+      --surface: #242420;
+      --surface2: #2e2e2a;
+      --border: rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.18);
+      --text: #f0efe9;
+      --text2: #a0a098;
+      --text3: #666660;
+      --blue-bg: #0c2a44;
+      --blue-text: #85B7EB;
+      --amber-bg: #2e1c04;
+      --amber-text: #FAC775;
+      --green-bg: #0d1e04;
+      --green-text: #C0DD97;
+      --green-border: #3B6D11;
+      --red-bg: #280a0a;
+      --red-text: #F7C1C1;
+      --red-border: #791F1F;
+      --warn-bg: #2e1c04;
+      --warn-text: #FAC775;
+      --warn-border: #633806;
+    }
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; min-height: 100vh; }
+  .app { max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+  /* TAB BAR */
+  .tab-bar { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 0.5px solid var(--border); display: flex; }
+  .tab { flex: 1; padding: 14px 4px; font-size: 12px; font-weight: 500; text-align: center; cursor: pointer; color: var(--text2); border: none; background: none; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; font-family: var(--font); }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+  /* PAGES */
+  .page { padding: 16px; display: none; }
+  .page.active { display: block; }
+  /* TYPOGRAPHY */
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: .07em; text-transform: uppercase; margin: 20px 0 10px; }
+  .section-label:first-child { margin-top: 4px; }
+  /* CARDS */
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  /* METRIC GRID */
+  .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
+  .metric { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 500; color: var(--text); }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  /* ALERTS */
+  .alert-card { border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; }
+  .alert-card.danger { background: var(--red-bg); border: 0.5px solid var(--red-border); }
+  .alert-card.warning { background: var(--warn-bg); border: 0.5px solid var(--warn-border); }
+  .alert-card.ok { background: var(--green-bg); border: 0.5px solid var(--green-border); }
+  .alert-title { font-size: 13px; font-weight: 600; }
+  .alert-title.danger { color: var(--red-text); }
+  .alert-title.warning { color: var(--warn-text); }
+  .alert-title.ok { color: var(--green-text); }
+  .alert-desc { font-size: 12px; margin-top: 3px; }
+  .alert-desc.danger { color: var(--red-text); }
+  .alert-desc.warning { color: var(--warn-text); }
+  .alert-desc.ok { color: var(--green-text); }
+  /* FORM */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+  .field input, .field select { width: 100%; padding: 9px 12px; font-size: 15px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-family: var(--font); outline: none; -webkit-appearance: none; }
+  .field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(24,95,165,0.12); }
+  .btn-primary { width: 100%; padding: 12px; font-size: 15px; font-weight: 600; background: var(--text); color: var(--surface); border: none; border-radius: var(--radius-sm); cursor: pointer; margin-top: 4px; font-family: var(--font); transition: opacity .15s; }
+  .btn-primary:active { opacity: .75; }
+  .btn-secondary { padding: 7px 14px; font-size: 13px; font-weight: 500; background: transparent; color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font); transition: background .12s; }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-danger { padding: 6px 10px; font-size: 12px; background: transparent; color: var(--red-text); border: 0.5px solid var(--red-border); border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font); }
+  /* TIERS */
+  .tier-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+  .tier-row .field { margin-bottom: 0; }
+  .tier-header { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 4px; }
+  .tier-header span { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+  .add-tier-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--blue); background: none; border: none; cursor: pointer; padding: 4px 0; font-family: var(--font); }
+  /* ROWS */
+  .reading-row, .month-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+  .reading-row:last-child, .month-row:last-child { border-bottom: none; }
+  .reading-date, .month-name { font-size: 13px; font-weight: 500; }
+  .reading-vals { text-align: right; }
+  .reading-val { font-size: 13px; }
+  .reading-delta { font-size: 11px; color: var(--text3); }
+  .month-costs { text-align: right; font-size: 13px; }
+  /* PILLS */
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; margin-left: 4px; }
+  .pill.water { background: var(--blue-bg); color: var(--blue-text); }
+  .pill.elec { background: var(--amber-bg); color: var(--amber-text); }
+  /* CHART */
+  .chart-wrap { position: relative; width: 100%; height: 200px; margin: 8px 0 4px; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--text2); margin-bottom: 8px; flex-wrap: wrap; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+  /* MISC */
+  .empty-state { text-align: center; padding: 28px 16px; color: var(--text3); font-size: 14px; }
+  .divider { border: none; border-top: 0.5px solid var(--border); margin: 12px 0; }
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 10px 20px; border-radius: 99px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  .row-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; justify-content: flex-end; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .badge.billed { background: var(--green-bg); color: var(--green-text); }
+  .badge.estimated { background: var(--surface2); color: var(--text3); }
+  select option { background: var(--surface); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tab-bar">
+    <button class="tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button class="tab" onclick="showPage('record',this)">Record</button>
+    <button class="tab" onclick="showPage('tariffs',this)">Tariffs</button>
+    <button class="tab" onclick="showPage('bills',this)">Bills</button>
+    <button class="tab" onclick="showPage('history',this)">History</button>
+  </div>
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div class="page active" id="page-dashboard">
+    <div class="section-label">Alerts</div>
+    <div id="alerts-container"></div>
+
+    <div class="section-label">This week</div>
+    <div class="metric-grid" id="weekly-metrics"></div>
+
+    <div class="section-label">Month-over-month usage</div>
+    <div class="card">
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#378ADD"></span>Water (kL)</span>
+        <span><span class="legend-dot" style="background:#EF9F27;border-left:3px dashed #EF9F27;background:none;width:18px;height:0;border-top:2px dashed #EF9F27"></span>Electricity (kWh)</span>
+      </div>
+      <div class="chart-wrap"><canvas id="trendChart" role="img" aria-label="Monthly usage trends for water and electricity"></canvas></div>
+    </div>
+
+    <div class="section-label">Cost over time</div>
+    <div class="card">
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#378ADD"></span>Water</span>
+        <span><span class="legend-dot" style="background:#EF9F27"></span>Electricity</span>
+      </div>
+      <div class="chart-wrap"><canvas id="costChart" role="img" aria-label="Monthly cost for water and electricity in Rand"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══ RECORD ═══ -->
+  <div class="page" id="page-record">
+    <div class="section-label">Weekly meter reading</div>
+    <div class="card">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="readingDate" />
+      </div>
+      <div class="field">
+        <label>Water meter (kL — kilolitres)</label>
+        <input type="number" id="waterReading" placeholder="e.g. 1234.5" step="0.1" inputmode="decimal" />
+      </div>
+      <div class="field">
+        <label>Electricity meter (kWh)</label>
+        <input type="number" id="elecReading" placeholder="e.g. 5678" step="1" inputmode="decimal" />
+      </div>
+      <button class="btn-primary" onclick="saveReading()">Save reading</button>
+    </div>
+  </div>
+
+  <!-- ═══ TARIFFS ═══ -->
+  <div class="page" id="page-tariffs">
+    <div class="section-label">Water tariff tiers</div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Enter your municipality's tiered rates. Each tier applies from its minimum up to (but not including) the next tier's minimum. Leave the last tier's max blank.</p>
+      <div class="tier-header">
+        <span>From (kL)</span>
+        <span>To (kL)</span>
+        <span>R per kL</span>
+        <span></span>
+      </div>
+      <div id="water-tiers"></div>
+      <button class="add-tier-btn" onclick="addTier('water')">+ Add tier</button>
+      <hr class="divider" />
+      <button class="btn-primary" onclick="saveTariffs()">Save tariffs</button>
+    </div>
+
+    <div class="section-label">Electricity tariff tiers</div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Enter your Eskom or municipality electricity tiers (kWh per month).</p>
+      <div class="tier-header">
+        <span>From (kWh)</span>
+        <span>To (kWh)</span>
+        <span>R per kWh</span>
+        <span></span>
+      </div>
+      <div id="elec-tiers"></div>
+      <button class="add-tier-btn" onclick="addTier('elec')">+ Add tier</button>
+      <hr class="divider" />
+      <div class="field" style="margin-top:12px;">
+        <label>Fixed monthly charge (R) — optional</label>
+        <input type="number" id="elecFixedCharge" placeholder="e.g. 85.00" step="0.01" inputmode="decimal" />
+      </div>
+      <button class="btn-primary" onclick="saveTariffs()">Save tariffs</button>
+    </div>
+  </div>
+
+  <!-- ═══ BILLS ═══ -->
+  <div class="page" id="page-bills">
+    <div class="section-label">Log monthly bill</div>
+    <div class="card">
+      <div class="field">
+        <label>Month</label>
+        <input type="month" id="billMonth" />
+      </div>
+      <div class="field">
+        <label>Water bill (R)</label>
+        <input type="number" id="waterBill" placeholder="e.g. 320.50" step="0.01" inputmode="decimal" />
+      </div>
+      <div class="field">
+        <label>Electricity bill (R)</label>
+        <input type="number" id="elecBill" placeholder="e.g. 1240.00" step="0.01" inputmode="decimal" />
+      </div>
+      <button class="btn-primary" onclick="saveBill()">Save bill</button>
+    </div>
+    <div class="section-label">Bill history</div>
+    <div class="card" id="bill-history"></div>
+  </div>
+
+  <!-- ═══ HISTORY ═══ -->
+  <div class="page" id="page-history">
+    <div class="section-label">Backup &amp; Restore</div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Export your data to your Mac's Downloads folder. Import restores a previous JSON backup — your existing data will be replaced.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn-primary" onclick="exportJSON()">⬇ Export full backup (.json)</button>
+        <button class="btn-primary" style="background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);" onclick="exportCSV()">⬇ Export readings as spreadsheet (.csv)</button>
+        <hr class="divider" style="margin:2px 0;" />
+        <label class="btn-primary" style="background:var(--surface);color:var(--text2);border:0.5px solid var(--border2);text-align:center;cursor:pointer;display:block;">
+          ⬆ Import backup (.json)
+          <input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" />
+        </label>
+      </div>
+      <div id="backup-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
+    </div>
+
+    <div class="section-label">Reading history</div>
+    <div class="card" id="reading-history"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let readings = [], bills = [], tariffs = {
+  water: [{ from: 0, to: 6, rate: 0 }, { from: 6, to: 10, rate: 18.50 }, { from: 10, to: 15, rate: 27.00 }, { from: 15, to: null, rate: 36.00 }],
+  elec:  [{ from: 0, to: 600, rate: 2.50 }, { from: 600, to: null, rate: 3.20 }],
+  elecFixed: 0
+};
+let trendChartInst = null, costChartInst = null;
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function persist() {
+  readings.sort((a,b) => a.date.localeCompare(b.date));
+  bills.sort((a,b) => a.month.localeCompare(b.month));
+  try {
+    localStorage.setItem('ut_readings', JSON.stringify(readings));
+    localStorage.setItem('ut_bills', JSON.stringify(bills));
+    localStorage.setItem('ut_tariffs', JSON.stringify(tariffs));
+  } catch(e) {}
+}
+
+function loadData() {
+  try { readings = JSON.parse(localStorage.getItem('ut_readings') || '[]'); } catch(e) { readings = []; }
+  try { bills = JSON.parse(localStorage.getItem('ut_bills') || '[]'); } catch(e) { bills = []; }
+  try {
+    const saved = JSON.parse(localStorage.getItem('ut_tariffs'));
+    if (saved) tariffs = saved;
+  } catch(e) {}
+  document.getElementById('readingDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('billMonth').value = new Date().toISOString().slice(0,7);
+  if (tariffs.elecFixed) document.getElementById('elecFixedCharge').value = tariffs.elecFixed;
+  renderTierUI('water');
+  renderTierUI('elec');
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'dashboard') refreshDashboard();
+  if (id === 'history') renderHistory();
+  if (id === 'bills') renderBillHistory();
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── Readings ────────────────────────────────────────────────────────────────
+function saveReading() {
+  const date = document.getElementById('readingDate').value;
+  const water = parseFloat(document.getElementById('waterReading').value);
+  const elec = parseFloat(document.getElementById('elecReading').value);
+  if (!date) { toast('Please select a date'); return; }
+  if (isNaN(water) && isNaN(elec)) { toast('Enter at least one reading'); return; }
+  const existing = readings.findIndex(r => r.date === date);
+  const entry = { date, water: isNaN(water) ? null : water, elec: isNaN(elec) ? null : elec };
+  if (existing >= 0) readings[existing] = entry;
+  else readings.push(entry);
+  persist();
+  document.getElementById('waterReading').value = '';
+  document.getElementById('elecReading').value = '';
+  toast('Reading saved');
+}
+
+// ─── Tariff tier UI ──────────────────────────────────────────────────────────
+function renderTierUI(type) {
+  const container = document.getElementById(type + '-tiers');
+  const tiers = tariffs[type];
+  container.innerHTML = tiers.map((t, i) => `
+    <div class="tier-row" id="${type}-tier-${i}">
+      <div class="field"><input type="number" step="0.01" inputmode="decimal" value="${t.from}" placeholder="0" onchange="updateTier('${type}',${i},'from',this.value)" /></div>
+      <div class="field"><input type="number" step="0.01" inputmode="decimal" value="${t.to !== null ? t.to : ''}" placeholder="∞" onchange="updateTier('${type}',${i},'to',this.value)" /></div>
+      <div class="field"><input type="number" step="0.0001" inputmode="decimal" value="${t.rate}" placeholder="0.00" onchange="updateTier('${type}',${i},'rate',this.value)" /></div>
+      <div><button class="btn-danger" onclick="removeTier('${type}',${i})" ${tiers.length <= 1 ? 'disabled' : ''}>✕</button></div>
+    </div>`).join('');
+}
+
+function updateTier(type, idx, field, val) {
+  tariffs[type][idx][field] = field === 'to' && val === '' ? null : parseFloat(val) || 0;
+}
+
+function addTier(type) {
+  const last = tariffs[type][tariffs[type].length - 1];
+  const newFrom = last.to !== null ? last.to : (last.from + 10);
+  tariffs[type].push({ from: newFrom, to: null, rate: 0 });
+  renderTierUI(type);
+}
+
+function removeTier(type, idx) {
+  if (tariffs[type].length <= 1) return;
+  tariffs[type].splice(idx, 1);
+  renderTierUI(type);
+}
+
+function saveTariffs() {
+  tariffs.elecFixed = parseFloat(document.getElementById('elecFixedCharge').value) || 0;
+  persist();
+  toast('Tariffs saved');
+}
+
+// ─── Tiered cost calculation ──────────────────────────────────────────────────
+function calcTieredCost(usage, tiers, fixed = 0) {
+  if (usage == null || isNaN(usage) || usage < 0) return null;
+  let cost = fixed;
+  for (const tier of tiers) {
+    if (usage <= tier.from) break;
+    const top = tier.to !== null ? Math.min(usage, tier.to) : usage;
+    const units = top - tier.from;
+    if (units > 0) cost += units * tier.rate;
+  }
+  return Math.round(cost * 100) / 100;
+}
+
+// ─── Derived data ────────────────────────────────────────────────────────────
+function getWeeklyUsage() {
+  const sorted = readings.filter(r => r.water != null || r.elec != null)
+                         .sort((a,b) => a.date.localeCompare(b.date));
+  if (sorted.length < 2) return [];
+  return sorted.slice(1).map((r, i) => {
+    const prev = sorted[i];
+    return {
+      date: r.date,
+      waterUsed: r.water != null && prev.water != null ? +(r.water - prev.water).toFixed(2) : null,
+      elecUsed:  r.elec  != null && prev.elec  != null ? +(r.elec  - prev.elec ).toFixed(1)  : null
+    };
+  });
+}
+
+function getMonthlyUsage() {
+  const monthly = {};
+  getWeeklyUsage().forEach(w => {
+    const m = w.date.slice(0,7);
+    if (!monthly[m]) monthly[m] = { water: 0, elec: 0, hasWater: false, hasElec: false };
+    if (w.waterUsed != null) { monthly[m].water = +(monthly[m].water + w.waterUsed).toFixed(2); monthly[m].hasWater = true; }
+    if (w.elecUsed  != null) { monthly[m].elec  = +(monthly[m].elec  + w.elecUsed ).toFixed(1);  monthly[m].hasElec  = true; }
+  });
+  return Object.entries(monthly).sort((a,b) => a[0].localeCompare(b[0]));
+}
+
+function fmtMonth(ym) {
+  const [y,m] = ym.split('-');
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1] + ' \'' + y.slice(2);
+}
+
+function rand(v) {
+  if (v == null) return '—';
+  return 'R\u00a0' + v.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+function refreshDashboard() {
+  renderAlerts();
+  renderWeeklyMetrics();
+  renderTrendChart();
+  renderCostChart();
+}
+
+function renderAlerts() {
+  const weekly = getWeeklyUsage();
+  const container = document.getElementById('alerts-container');
+  if (weekly.length < 4) {
+    container.innerHTML = '<div class="alert-card ok"><div class="alert-title ok">Not enough data yet</div><div class="alert-desc ok">Add at least 4 weekly readings to see spike alerts.</div></div>';
+    return;
+  }
+  const recent = weekly[weekly.length - 1];
+  const prev = weekly.slice(-5, -1);
+  const alerts = [];
+
+  if (recent.waterUsed != null) {
+    const prevWater = prev.filter(w => w.waterUsed != null);
+    if (prevWater.length > 0) {
+      const avg = prevWater.reduce((s,w) => s + w.waterUsed, 0) / prevWater.length;
+      const pct = avg > 0 ? (recent.waterUsed - avg) / avg * 100 : 0;
+      if (pct > 40) alerts.push({ type:'danger', title:'Water usage spike', desc:`This week: ${recent.waterUsed} kL — ${Math.round(pct)}% above your recent average of ${avg.toFixed(1)} kL.` });
+      else if (pct > 20) alerts.push({ type:'warning', title:'Water usage above normal', desc:`Up ${Math.round(pct)}% vs recent average (${avg.toFixed(1)} kL). Worth investigating.` });
+      else if (pct < -20) alerts.push({ type:'ok', title:'Water usage down', desc:`${Math.abs(Math.round(pct))}% below your recent average — good going!` });
+    }
+  }
+
+  if (recent.elecUsed != null) {
+    const prevElec = prev.filter(w => w.elecUsed != null);
+    if (prevElec.length > 0) {
+      const avg = prevElec.reduce((s,w) => s + w.elecUsed, 0) / prevElec.length;
+      const pct = avg > 0 ? (recent.elecUsed - avg) / avg * 100 : 0;
+      if (pct > 40) alerts.push({ type:'danger', title:'Electricity spike', desc:`This week: ${recent.elecUsed} kWh — ${Math.round(pct)}% above recent average of ${avg.toFixed(0)} kWh.` });
+      else if (pct > 20) alerts.push({ type:'warning', title:'Electricity above normal', desc:`Up ${Math.round(pct)}% vs recent average of ${avg.toFixed(0)} kWh.` });
+      else if (pct < -20) alerts.push({ type:'ok', title:'Electricity usage down', desc:`${Math.abs(Math.round(pct))}% below recent average.` });
+    }
+  }
+
+  if (alerts.length === 0) alerts.push({ type:'ok', title:'All normal', desc:'Water and electricity are both within normal range this week.' });
+  container.innerHTML = alerts.map(a => `<div class="alert-card ${a.type}"><div class="alert-title ${a.type}">${a.title}</div><div class="alert-desc ${a.type}">${a.desc}</div></div>`).join('');
+}
+
+function renderWeeklyMetrics() {
+  const weekly = getWeeklyUsage();
+  const container = document.getElementById('weekly-metrics');
+  if (weekly.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="grid-column:span 2">No readings recorded yet</div>';
+    return;
+  }
+  const last = weekly[weekly.length - 1];
+  const prev = weekly.length > 1 ? weekly[weekly.length - 2] : null;
+  const wDelta = (prev && last.waterUsed != null && prev.waterUsed != null) ? (last.waterUsed - prev.waterUsed).toFixed(1) : null;
+  const eDelta = (prev && last.elecUsed  != null && prev.elecUsed  != null) ? (last.elecUsed  - prev.elecUsed ).toFixed(0)  : null;
+  const wCost = last.waterUsed != null ? calcTieredCost(last.waterUsed, tariffs.water) : null;
+  const eCost = last.elecUsed  != null ? calcTieredCost(last.elecUsed,  tariffs.elec, tariffs.elecFixed) : null;
+  const cards = [];
+  if (last.waterUsed != null) cards.push(`<div class="metric"><div class="metric-label">Water used</div><div class="metric-value">${last.waterUsed}</div><div class="metric-sub">kL${wDelta !== null ? ' · ' + (wDelta > 0 ? '+' : '') + wDelta + ' vs prev' : ''}</div></div>`);
+  if (last.elecUsed  != null) cards.push(`<div class="metric"><div class="metric-label">Electricity used</div><div class="metric-value">${last.elecUsed}</div><div class="metric-sub">kWh${eDelta !== null ? ' · ' + (eDelta > 0 ? '+' : '') + eDelta + ' vs prev' : ''}</div></div>`);
+  if (wCost != null) cards.push(`<div class="metric"><div class="metric-label">Est. water cost</div><div class="metric-value" style="font-size:18px;">${rand(wCost)}</div><div class="metric-sub">tiered tariff</div></div>`);
+  if (eCost != null) cards.push(`<div class="metric"><div class="metric-label">Est. elec cost</div><div class="metric-value" style="font-size:18px;">${rand(eCost)}</div><div class="metric-sub">incl. fixed: ${rand(tariffs.elecFixed)}</div></div>`);
+  container.innerHTML = cards.join('');
+}
+
+function renderTrendChart() {
+  const monthly = getMonthlyUsage();
+  const ctx = document.getElementById('trendChart');
+  if (trendChartInst) { trendChartInst.destroy(); trendChartInst = null; }
+  if (monthly.length === 0) return;
+  trendChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: monthly.map(m => fmtMonth(m[0])),
+      datasets: [
+        { label: 'Water (kL)', data: monthly.map(m => m[1].hasWater ? m[1].water : null), backgroundColor: '#B5D4F4', borderColor: '#378ADD', borderWidth: 1, yAxisID: 'y' },
+        { label: 'Elec (kWh)', data: monthly.map(m => m[1].hasElec ? m[1].elec : null), type: 'line', borderColor: '#EF9F27', borderDash: [4,4], backgroundColor: 'rgba(239,159,39,0.08)', tension: 0.3, yAxisID: 'y2', spanGaps: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 11 }, autoSkip: false, maxRotation: 45 } },
+        y:  { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => v + ' kL' }, position: 'left' },
+        y2: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => v + ' kWh' }, position: 'right', grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+}
+
+function renderCostChart() {
+  const monthly = Object.fromEntries(getMonthlyUsage());
+  const billMap  = Object.fromEntries(bills.map(b => [b.month, b]));
+  const allMonths = Array.from(new Set([...Object.keys(monthly), ...bills.map(b => b.month)])).sort();
+  const ctx = document.getElementById('costChart');
+  if (costChartInst) { costChartInst.destroy(); costChartInst = null; }
+  if (allMonths.length === 0) return;
+  const waterCosts = allMonths.map(m => {
+    if (billMap[m] && billMap[m].water != null) return billMap[m].water;
+    if (monthly[m] && monthly[m].hasWater) return calcTieredCost(monthly[m].water, tariffs.water);
+    return null;
+  });
+  const elecCosts = allMonths.map(m => {
+    if (billMap[m] && billMap[m].elec != null) return billMap[m].elec;
+    if (monthly[m] && monthly[m].hasElec) return calcTieredCost(monthly[m].elec, tariffs.elec, tariffs.elecFixed);
+    return null;
+  });
+  costChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allMonths.map(fmtMonth),
+      datasets: [
+        { label: 'Water', data: waterCosts, borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', tension: 0.3, spanGaps: true, pointRadius: 4 },
+        { label: 'Electricity', data: elecCosts, borderColor: '#EF9F27', backgroundColor: 'rgba(239,159,39,0.08)', tension: 0.3, borderDash: [5,4], spanGaps: true, pointRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 11 }, autoSkip: false, maxRotation: 45 } },
+        y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => 'R ' + v.toLocaleString('en-ZA') } }
+      }
+    }
+  });
+}
+
+function renderHistory() {
+  const sorted = [...readings].sort((a,b) => b.date.localeCompare(a.date));
+  const usageByDate = Object.fromEntries(getWeeklyUsage().map(w => [w.date, w]));
+  const container = document.getElementById('reading-history');
+  if (sorted.length === 0) { container.innerHTML = '<div class="empty-state">No readings recorded yet</div>'; return; }
+  container.innerHTML = sorted.map(r => {
+    const u = usageByDate[r.date];
+    return `<div class="reading-row">
+      <div><div class="reading-date">${r.date}</div></div>
+      <div class="reading-vals">
+        ${r.water != null ? `<div class="reading-val"><span class="pill water">W</span> ${r.water} kL${u && u.waterUsed != null ? ' <span style="font-size:11px;color:var(--text3)">(+'+u.waterUsed+')</span>' : ''}</div>` : ''}
+        ${r.elec  != null ? `<div class="reading-val"><span class="pill elec">E</span> ${r.elec} kWh${u && u.elecUsed != null ? ' <span style="font-size:11px;color:var(--text3)">(+'+u.elecUsed+')</span>' : ''}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBillHistory() {
+  const sorted = [...bills].sort((a,b) => b.month.localeCompare(a.month));
+  const container = document.getElementById('bill-history');
+  if (sorted.length === 0) { container.innerHTML = '<div class="empty-state">No bills logged yet</div>'; return; }
+  container.innerHTML = sorted.map(b => `<div class="month-row">
+    <div class="month-name">${fmtMonth(b.month)}</div>
+    <div class="month-costs">
+      ${b.water != null ? `<span class="pill water">W ${rand(b.water)}</span> ` : ''}
+      ${b.elec  != null ? `<span class="pill elec">E ${rand(b.elec)}</span>` : ''}
+    </div>
+  </div>`).join('');
+}
+
+// ─── Backup & Restore ─────────────────────────────────────────────────────────
+function triggerDownload(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+function datestamp() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function exportJSON() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    readings,
+    bills,
+    tariffs
+  };
+  triggerDownload(JSON.stringify(payload, null, 2), `utility-backup-${datestamp()}.json`, 'application/json');
+  toast('Backup saved to Downloads');
+}
+
+function exportCSV() {
+  const weekly = getWeeklyUsage();
+  const usageByDate = Object.fromEntries(weekly.map(w => [w.date, w]));
+  const sorted = [...readings].sort((a,b) => a.date.localeCompare(b.date));
+
+  const lines = [
+    ['Date', 'Water meter (kL)', 'Electricity meter (kWh)', 'Water used (kL)', 'Electricity used (kWh)', 'Est. water cost (R)', 'Est. elec cost (R)'].join(',')
+  ];
+
+  sorted.forEach(r => {
+    const u = usageByDate[r.date];
+    const wUsed  = u && u.waterUsed != null ? u.waterUsed : '';
+    const eUsed  = u && u.elecUsed  != null ? u.elecUsed  : '';
+    const wCost  = u && u.waterUsed != null ? (calcTieredCost(u.waterUsed, tariffs.water) ?? '') : '';
+    const eCost  = u && u.elecUsed  != null ? (calcTieredCost(u.elecUsed,  tariffs.elec, tariffs.elecFixed) ?? '') : '';
+    lines.push([
+      r.date,
+      r.water ?? '',
+      r.elec  ?? '',
+      wUsed, eUsed, wCost, eCost
+    ].join(','));
+  });
+
+  // Append bills sheet as second block
+  if (bills.length > 0) {
+    lines.push('');
+    lines.push(['Month', 'Water bill (R)', 'Electricity bill (R)'].join(','));
+    [...bills].sort((a,b) => a.month.localeCompare(b.month)).forEach(b => {
+      lines.push([b.month, b.water ?? '', b.elec ?? ''].join(','));
+    });
+  }
+
+  triggerDownload(lines.join('\n'), `utility-readings-${datestamp()}.csv`, 'text/csv');
+  toast('CSV saved to Downloads');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const msg = document.getElementById('backup-msg');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.readings || !Array.isArray(data.readings)) throw new Error('Invalid backup file');
+      if (!confirm(`This will replace all your current data with the backup from ${(data.exportedAt || 'unknown date').slice(0,10)}.\n\nAre you sure?`)) {
+        event.target.value = '';
+        return;
+      }
+      readings = data.readings || [];
+      bills    = data.bills    || [];
+      if (data.tariffs) {
+        tariffs = data.tariffs;
+        renderTierUI('water');
+        renderTierUI('elec');
+        if (tariffs.elecFixed) document.getElementById('elecFixedCharge').value = tariffs.elecFixed;
+      }
+      persist();
+      renderHistory();
+      renderBillHistory();
+      msg.style.color = 'var(--green-text)';
+      msg.textContent = `✓ Restored ${readings.length} readings and ${bills.length} bills from backup.`;
+      event.target.value = '';
+    } catch(err) {
+      msg.style.color = 'var(--red-text)';
+      msg.textContent = '✗ Could not read file — make sure it is a valid utility-backup JSON file.';
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+loadData();
+refreshDashboard();
+</script>
+
+<!-- ═══ PASSWORD GATE ═══════════════════════════════════════════════════════
+  To change your password:
+    1. Go to https://emn178.github.io/online-tools/sha256.html
+    2. Type your new password and copy the SHA-256 hash
+    3. Replace the PASSWORD_HASH value below with your new hash
+    4. The default password is:  UtilityTracker1
+════════════════════════════════════════════════════════════════════════════ -->
+<style>
+  #gate {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  #gate.hidden { display: none; }
+  .gate-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 32px 24px 24px;
+    width: 100%; max-width: 340px;
+    text-align: center;
+  }
+  .gate-icon { font-size: 36px; margin-bottom: 16px; }
+  .gate-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .gate-sub { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+  .gate-input-wrap { position: relative; margin-bottom: 12px; }
+  #gate-pw {
+    width: 100%; padding: 11px 44px 11px 14px;
+    font-size: 16px; font-family: var(--font);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text);
+    outline: none; letter-spacing: 0.08em;
+  }
+  #gate-pw:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(24,95,165,0.12); }
+  #gate-pw.shake {
+    animation: shake .35s ease;
+    border-color: #E24B4A;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  .gate-eye {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; padding: 4px;
+    color: var(--text3); font-size: 18px; line-height: 1;
+  }
+  #gate-btn {
+    width: 100%; padding: 12px;
+    font-size: 15px; font-weight: 600; font-family: var(--font);
+    background: var(--text); color: var(--surface);
+    border: none; border-radius: var(--radius-sm);
+    cursor: pointer; transition: opacity .15s;
+  }
+  #gate-btn:active { opacity: .75; }
+  #gate-error {
+    font-size: 13px; color: #A32D2D;
+    margin-top: 10px; min-height: 18px;
+  }
+  .gate-hint { font-size: 12px; color: var(--text3); margin-top: 16px; }
+</style>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-icon">🔒</div>
+    <div class="gate-title">Utility Tracker</div>
+    <div class="gate-sub">Enter your password to continue</div>
+    <div class="gate-input-wrap">
+      <input id="gate-pw" type="password" placeholder="Password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')unlock()" />
+      <button class="gate-eye" onclick="toggleEye()" id="eye-btn" aria-label="Show password">👁</button>
+    </div>
+    <button id="gate-btn" onclick="unlock()">Unlock</button>
+    <div id="gate-error"></div>
+    <div class="gate-hint">This app is password protected.</div>
+  </div>
+</div>
+
+<script>
+  // SHA-256 hash of the password. Default password: UtilityTracker1
+  // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
+  const SESSION_KEY = 'ut_auth';
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function unlock() {
+    const pw = document.getElementById('gate-pw').value;
+    const hash = await sha256(pw);
+    if (hash === PASSWORD_HASH) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.getElementById('gate').classList.add('hidden');
+      document.getElementById('gate-error').textContent = '';
+    } else {
+      const input = document.getElementById('gate-pw');
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      document.getElementById('gate-error').textContent = 'Incorrect password — try again.';
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  function toggleEye() {
+    const pw = document.getElementById('gate-pw');
+    const btn = document.getElementById('eye-btn');
+    if (pw.type === 'password') { pw.type = 'text'; btn.textContent = '🙈'; }
+    else { pw.type = 'password'; btn.textContent = '👁'; }
+  }
+
+  // Show gate or skip if already authenticated this session
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('gate').classList.add('hidden');
+  } else {
+    document.getElementById('gate-pw').focus();
+  }
+</script>
+</body>
+</html>
