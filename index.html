@@ -154,7 +154,7 @@
     <div class="section-label">Alerts</div>
     <div id="alerts-container"></div>
 
-    <div class="section-label">This week</div>
+    <div class="section-label">Latest reading</div>
     <div class="metric-grid" id="weekly-metrics"></div>
 
     <div class="section-label">Month-over-month usage</div>
@@ -178,7 +178,7 @@
 
   <!-- ═══ RECORD ═══ -->
   <div class="page" id="page-record">
-    <div class="section-label">Weekly meter reading</div>
+    <div class="section-label">Meter reading</div>
     <div class="card">
       <div class="field">
         <label>Date</label>
@@ -447,7 +447,7 @@ function renderAlerts() {
   const weekly = getWeeklyUsage();
   const container = document.getElementById('alerts-container');
   if (weekly.length < 4) {
-    container.innerHTML = '<div class="alert-card ok"><div class="alert-title ok">Not enough data yet</div><div class="alert-desc ok">Add at least 4 weekly readings to see spike alerts.</div></div>';
+    container.innerHTML = '<div class="alert-card ok"><div class="alert-title ok">Not enough data yet</div><div class="alert-desc ok">Add at least 4 readings to see spike alerts.</div></div>';
     return;
   }
   const recent = weekly[weekly.length - 1];
@@ -459,7 +459,7 @@ function renderAlerts() {
     if (prevWater.length > 0) {
       const avg = prevWater.reduce((s,w) => s + w.waterUsed, 0) / prevWater.length;
       const pct = avg > 0 ? (recent.waterUsed - avg) / avg * 100 : 0;
-      if (pct > 40) alerts.push({ type:'danger', title:'Water usage spike', desc:`This week: ${recent.waterUsed} kL — ${Math.round(pct)}% above your recent average of ${avg.toFixed(1)} kL.` });
+      if (pct > 40) alerts.push({ type:'danger', title:'Water usage spike', desc:`Latest: ${recent.waterUsed} kL — ${Math.round(pct)}% above your recent average of ${avg.toFixed(1)} kL.` });
       else if (pct > 20) alerts.push({ type:'warning', title:'Water usage above normal', desc:`Up ${Math.round(pct)}% vs recent average (${avg.toFixed(1)} kL). Worth investigating.` });
       else if (pct < -20) alerts.push({ type:'ok', title:'Water usage down', desc:`${Math.abs(Math.round(pct))}% below your recent average — good going!` });
     }
@@ -470,13 +470,13 @@ function renderAlerts() {
     if (prevElec.length > 0) {
       const avg = prevElec.reduce((s,w) => s + w.elecUsed, 0) / prevElec.length;
       const pct = avg > 0 ? (recent.elecUsed - avg) / avg * 100 : 0;
-      if (pct > 40) alerts.push({ type:'danger', title:'Electricity spike', desc:`This week: ${recent.elecUsed} kWh — ${Math.round(pct)}% above recent average of ${avg.toFixed(0)} kWh.` });
+      if (pct > 40) alerts.push({ type:'danger', title:'Electricity spike', desc:`Latest: ${recent.elecUsed} kWh — ${Math.round(pct)}% above recent average of ${avg.toFixed(0)} kWh.` });
       else if (pct > 20) alerts.push({ type:'warning', title:'Electricity above normal', desc:`Up ${Math.round(pct)}% vs recent average of ${avg.toFixed(0)} kWh.` });
       else if (pct < -20) alerts.push({ type:'ok', title:'Electricity usage down', desc:`${Math.abs(Math.round(pct))}% below recent average.` });
     }
   }
 
-  if (alerts.length === 0) alerts.push({ type:'ok', title:'All normal', desc:'Water and electricity are both within normal range this week.' });
+  if (alerts.length === 0) alerts.push({ type:'ok', title:'All normal', desc:'Water and electricity are both within normal range for the latest reading.' });
   container.innerHTML = alerts.map(a => `<div class="alert-card ${a.type}"><div class="alert-title ${a.type}">${a.title}</div><div class="alert-desc ${a.type}">${a.desc}</div></div>`).join('');
 }
 
