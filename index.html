@@ -136,8 +136,25 @@
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
   .badge.billed { background: var(--green-bg); color: var(--green-text); }
   .badge.estimated { background: var(--surface2); color: var(--text3); }
-  select option { background: var(--surface); color: var(--text); }
-</style>
+  /* HELP */
+  #help-panel { background: var(--bg); min-height: 100vh; }
+  .help-body { padding: 16px; padding-bottom: 80px; max-width: 480px; margin: 0 auto; }
+  .help-body h2 { font-size: 22px; font-weight: 700; margin: 24px 0 8px; color: var(--text); }
+  .help-body h2:first-child { margin-top: 4px; }
+  .help-body h3 { font-size: 16px; font-weight: 600; margin: 18px 0 6px; color: var(--text); }
+  .help-body h4 { font-size: 14px; font-weight: 600; margin: 14px 0 4px; color: var(--text); }
+  .help-body p { font-size: 14px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
+  .help-body ul, .help-body ol { font-size: 14px; color: var(--text2); padding-left: 20px; margin-bottom: 10px; line-height: 1.7; }
+  .help-body li { margin-bottom: 3px; }
+  .help-body code { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border); padding: 1px 6px; border-radius: 4px; font-family: monospace; color: var(--text); }
+  .help-body blockquote { border-left: 3px solid var(--border2); padding: 8px 12px; margin: 10px 0; background: var(--surface2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 13px; color: var(--text2); }
+  .help-body hr { border: none; border-top: 0.5px solid var(--border); margin: 20px 0; }
+  .help-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
+  .help-body th { text-align: left; padding: 7px 10px; background: var(--surface2); color: var(--text); font-weight: 600; border: 0.5px solid var(--border); }
+  .help-body td { padding: 7px 10px; color: var(--text2); border: 0.5px solid var(--border); vertical-align: top; }
+  .help-body a { color: var(--blue); text-decoration: none; }
+  .help-body strong { color: var(--text); font-weight: 600; }
+
 </head>
 <body>
 <div class="app">
@@ -147,6 +164,7 @@
     <button class="tab" onclick="showPage('tariffs',this)">Tariffs</button>
     <button class="tab" onclick="showPage('bills',this)">Bills</button>
     <button class="tab" onclick="showPage('history',this)">History</button>
+    <button class="tab" onclick="showHelp()" id="help-tab">Help</button>
   </div>
 
   <!-- ═══ DASHBOARD ═══ -->
@@ -272,12 +290,42 @@
       <div id="backup-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
     </div>
 
+    <div class="section-label">Import from Excel</div>
+    <div class="card" id="xl-card">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Import your historical readings and bills from your existing Excel spreadsheet. Dates already in the app will be overwritten by imported data.</p>
+
+      <div class="field">
+        <label>Electricity sheet name</label>
+        <input type="text" id="xl-elec-sheet" placeholder="e.g. Electricity" />
+      </div>
+      <div class="field">
+        <label>Water sheet name</label>
+        <input type="text" id="xl-water-sheet" placeholder="e.g. Water" />
+      </div>
+      <div class="field">
+        <label>Bills sheet name</label>
+        <input type="text" id="xl-bills-sheet" placeholder="e.g. Bills" />
+      </div>
+
+      <label class="btn-primary" style="background:var(--text);color:var(--surface);text-align:center;cursor:pointer;display:block;margin-top:4px;">
+        📂 Choose Excel file (.xlsx)
+        <input type="file" accept=".xlsx,.xls" onchange="importExcel(event)" style="display:none;" />
+      </label>
+      <div id="xl-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
+      <div id="xl-preview" style="margin-top:12px;"></div>
+    </div>
+
     <div class="section-label">Reading history</div>
     <div class="card" id="reading-history"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ═══ HELP PANEL ═══ -->
+<div id="help-panel" style="display:none;">
+  <div id="help-content"></div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
@@ -699,13 +747,452 @@ loadData();
 refreshDashboard();
 </script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ─── Excel Import ─────────────────────────────────────────────────────────────
+
+// Parse a date value from Excel — handles serial numbers, mm/dd/yyyy strings,
+// dd-mmm-yy strings (e.g. 15-Jan-22), and ISO strings.
+function parseXLDate(val) {
+  if (val == null || val === '') return null;
+
+  // Excel date serial number
+  if (typeof val === 'number') {
+    const d = XLSX.SSF.parse_date_code(val);
+    if (!d) return null;
+    const mm = String(d.m).padStart(2,'0');
+    const dd = String(d.d).padStart(2,'0');
+    return `${d.y}-${mm}-${dd}`;
+  }
+
+  const s = String(val).trim();
+
+  // dd-mmm-yy or dd-mmm-yyyy  e.g. "15-Jan-22" or "15-Jan-2022"
+  const dmy = s.match(/^(\d{1,2})[-\/\s]([A-Za-z]{3})[-\/\s](\d{2,4})$/);
+  if (dmy) {
+    const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    const m = months[dmy[2].toLowerCase()];
+    if (!m) return null;
+    let y = parseInt(dmy[3]);
+    if (y < 100) y += y < 50 ? 2000 : 1900;
+    return `${y}-${String(m).padStart(2,'0')}-${String(dmy[1]).padStart(2,'0')}`;
+  }
+
+  // mm/dd/yyyy
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdy) {
+    return `${mdy[3]}-${mdy[1].padStart(2,'0')}-${mdy[2].padStart(2,'0')}`;
+  }
+
+  // yyyy-mm-dd already
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  return null;
+}
+
+// Parse a month value from the bills sheet into yyyy-mm
+function parseXLMonth(val) {
+  if (val == null || val === '') return null;
+
+  if (typeof val === 'number') {
+    const d = XLSX.SSF.parse_date_code(val);
+    if (!d) return null;
+    return `${d.y}-${String(d.m).padStart(2,'0')}`;
+  }
+
+  const s = String(val).trim();
+
+  // dd-mmm-yy / mmm-yy / mmm-yyyy
+  const my = s.match(/^(?:\d{1,2}[-\/\s])?([A-Za-z]{3})[-\/\s](\d{2,4})$/);
+  if (my) {
+    const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    const m = months[my[1].toLowerCase()];
+    if (!m) return null;
+    let y = parseInt(my[2]);
+    if (y < 100) y += y < 50 ? 2000 : 1900;
+    return `${y}-${String(m).padStart(2,'0')}`;
+  }
+
+  // mm/dd/yyyy or mm/yyyy
+  const slash = s.match(/^(\d{1,2})\/(?:\d{1,2}\/)?(\d{4})$/);
+  if (slash) return `${slash[2]}-${slash[1].padStart(2,'0')}`;
+
+  // yyyy-mm
+  if (/^\d{4}-\d{2}$/.test(s)) return s;
+
+  return null;
+}
+
+function findCol(headers, ...candidates) {
+  for (const c of candidates) {
+    const idx = headers.findIndex(h => h && h.toString().toLowerCase().trim() === c.toLowerCase());
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function sheetToRows(wb, sheetName) {
+  const ws = wb.Sheets[sheetName];
+  if (!ws) return null;
+  // raw:false keeps formatted strings; raw:true keeps numbers — we want both
+  return XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false });
+}
+
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const msg = document.getElementById('xl-msg');
+  const preview = document.getElementById('xl-preview');
+  msg.textContent = 'Reading file…';
+  msg.style.color = 'var(--text2)';
+  preview.innerHTML = '';
+
+  const elecSheetName  = document.getElementById('xl-elec-sheet').value.trim();
+  const waterSheetName = document.getElementById('xl-water-sheet').value.trim();
+  const billsSheetName = document.getElementById('xl-bills-sheet').value.trim();
+
+  if (!elecSheetName || !waterSheetName || !billsSheetName) {
+    msg.style.color = 'var(--red-text)';
+    msg.textContent = '✗ Please enter all three sheet names before choosing a file.';
+    event.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: false });
+
+      const availableSheets = wb.SheetNames.join(', ');
+      const missing = [];
+      if (!wb.Sheets[elecSheetName])  missing.push(`"${elecSheetName}"`);
+      if (!wb.Sheets[waterSheetName]) missing.push(`"${waterSheetName}"`);
+      if (!wb.Sheets[billsSheetName]) missing.push(`"${billsSheetName}"`);
+      if (missing.length) {
+        msg.style.color = 'var(--red-text)';
+        msg.textContent = `✗ Sheet(s) not found: ${missing.join(', ')}. Available sheets: ${availableSheets}.`;
+        event.target.value = '';
+        return;
+      }
+
+      // ── Parse readings sheets ──────────────────────────────────────────────
+      function parseReadingSheet(sheetName, type) {
+        const rows = sheetToRows(wb, sheetName);
+        if (!rows || rows.length < 2) return { data: {}, errors: [] };
+
+        // Also read with raw:true to get numeric meter values accurately
+        const rawRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null, raw: true });
+
+        const headers = rows[0].map(h => h ? h.toString() : '');
+        const dateCol  = findCol(headers, 'date');
+        const meterCol = findCol(headers, 'meter reading', 'meter', 'reading');
+
+        if (dateCol < 0 || meterCol < 0) {
+          return { data: {}, errors: [`Could not find "Date" and "Meter Reading" columns in sheet "${sheetName}". Found: ${headers.filter(Boolean).join(', ')}`] };
+        }
+
+        const data = {};
+        const errors = [];
+        for (let i = 1; i < rows.length; i++) {
+          const rawDate  = rawRows[i] ? rawRows[i][dateCol]  : null;
+          const rawMeter = rawRows[i] ? rawRows[i][meterCol] : null;
+          const fmtDate  = rows[i] ? rows[i][dateCol]  : null;
+
+          // Use formatted date string for parsing (handles dd-mmm-yy), fall back to raw
+          const dateStr = parseXLDate(fmtDate) || parseXLDate(rawDate);
+          const meter   = rawMeter != null ? parseFloat(rawMeter) : null;
+
+          if (!dateStr || meter == null || isNaN(meter)) continue;
+          data[dateStr] = meter;
+        }
+        return { data, errors };
+      }
+
+      const elecResult  = parseReadingSheet(elecSheetName,  'elec');
+      const waterResult = parseReadingSheet(waterSheetName, 'water');
+
+      // ── Parse bills sheet ──────────────────────────────────────────────────
+      function parseBillsSheet(sheetName) {
+        const rows    = sheetToRows(wb, sheetName);
+        const rawRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null, raw: true });
+        if (!rows || rows.length < 2) return { data: {}, errors: [] };
+
+        const headers = rows[0].map(h => h ? h.toString() : '');
+        const monthCol = findCol(headers, 'bill month', 'month', 'date');
+        const waterCol = findCol(headers, 'water');
+        const elecCol  = findCol(headers, 'electricity', 'elec');
+
+        if (monthCol < 0) {
+          return { data: {}, errors: [`Could not find "Bill Month" column in "${sheetName}". Found: ${headers.filter(Boolean).join(', ')}`] };
+        }
+
+        const data = {};
+        for (let i = 1; i < rows.length; i++) {
+          const rawMonth = rawRows[i] ? rawRows[i][monthCol] : null;
+          const fmtMonth = rows[i]    ? rows[i][monthCol]    : null;
+          const monthStr = parseXLMonth(fmtMonth) || parseXLMonth(rawMonth);
+          if (!monthStr) continue;
+
+          const water = waterCol >= 0 && rawRows[i] && rawRows[i][waterCol] != null ? parseFloat(rawRows[i][waterCol]) : null;
+          const elec  = elecCol  >= 0 && rawRows[i] && rawRows[i][elecCol]  != null ? parseFloat(rawRows[i][elecCol])  : null;
+          if (water == null && elec == null) continue;
+          data[monthStr] = { water: isNaN(water) ? null : water, elec: isNaN(elec) ? null : elec };
+        }
+        return { data, errors: [] };
+      }
+
+      const billsResult = parseBillsSheet(billsSheetName);
+
+      // Collect all errors
+      const allErrors = [...(elecResult.errors || []), ...(waterResult.errors || []), ...(billsResult.errors || [])];
+      if (allErrors.length && Object.keys(elecResult.data).length === 0 && Object.keys(waterResult.data).length === 0) {
+        msg.style.color = 'var(--red-text)';
+        msg.textContent = '✗ ' + allErrors[0];
+        event.target.value = '';
+        return;
+      }
+
+      // ── Merge into app data ────────────────────────────────────────────────
+      // Build a map of existing readings by date for merge
+      const readingMap = {};
+      readings.forEach(r => { readingMap[r.date] = { ...r }; });
+
+      // Merge electricity
+      Object.entries(elecResult.data).forEach(([date, meter]) => {
+        if (!readingMap[date]) readingMap[date] = { date, water: null, elec: null };
+        readingMap[date].elec = meter;
+      });
+
+      // Merge water
+      Object.entries(waterResult.data).forEach(([date, meter]) => {
+        if (!readingMap[date]) readingMap[date] = { date, water: null, elec: null };
+        readingMap[date].water = meter;
+      });
+
+      readings = Object.values(readingMap).sort((a,b) => a.date.localeCompare(b.date));
+
+      // Merge bills
+      const billMap = {};
+      bills.forEach(b => { billMap[b.month] = { ...b }; });
+      Object.entries(billsResult.data).forEach(([month, vals]) => {
+        billMap[month] = { month, ...vals };
+      });
+      bills = Object.values(billMap).sort((a,b) => a.month.localeCompare(b.month));
+
+      persist();
+      renderHistory();
+      renderBillHistory();
+      refreshDashboard();
+
+      // ── Summary ────────────────────────────────────────────────────────────
+      const elecCount  = Object.keys(elecResult.data).length;
+      const waterCount = Object.keys(waterResult.data).length;
+      const billCount  = Object.keys(billsResult.data).length;
+
+      msg.style.color = 'var(--green-text)';
+      msg.textContent = `✓ Imported: ${elecCount} electricity readings, ${waterCount} water readings, ${billCount} bills.`;
+
+      if (allErrors.length) {
+        const warn = document.createElement('div');
+        warn.style.cssText = 'font-size:12px;color:var(--warn-text);margin-top:6px;';
+        warn.textContent = '⚠ ' + allErrors.join(' | ');
+        document.getElementById('xl-msg').after(warn);
+      }
+
+      // Show date range summary
+      if (readings.length > 0) {
+        const first = readings[0].date;
+        const last  = readings[readings.length - 1].date;
+        preview.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-top:4px;">Date range: ${first} → ${last} &nbsp;·&nbsp; ${readings.length} total readings in app</div>`;
+      }
+
+      event.target.value = '';
+    } catch(err) {
+      msg.style.color = 'var(--red-text)';
+      msg.textContent = `✗ Failed to read file: ${err.message}`;
+      event.target.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+</script>
+
+<script>
+// ─── Help panel ───────────────────────────────────────────────────────────────
+const HELP_HTML = `<div class="help-body">
+<h2>💧⚡ Utility Tracker — Help</h2>
+<p>A mobile-friendly app for tracking your water and electricity meter readings, monitoring usage trends, and keeping an eye on costs. All data is stored privately on your device.</p>
+<hr>
+
+<h2>Record tab</h2>
+<p>Enter your meter readings whenever you take them. Weekly is ideal for accurate comparisons, but any frequency works — the app calculates usage as the difference between consecutive readings regardless of the interval.</p>
+<table>
+  <tr><th>Field</th><th>What to enter</th></tr>
+  <tr><td>Date</td><td>The date you took the reading</td></tr>
+  <tr><td>Water meter (kL)</td><td>The number shown on your water meter dial in kilolitres</td></tr>
+  <tr><td>Electricity meter (kWh)</td><td>The number shown on your electricity meter dial</td></tr>
+</table>
+<blockquote>You only need to enter the readings you have — if you only have one meter, leave the other blank. The first reading you enter establishes a baseline and won't show usage by itself.</blockquote>
+<hr>
+
+<h2>Tariffs tab</h2>
+<p>Configure how costs are estimated from your usage. South African municipalities charge on a sliding scale — the more you use, the higher the rate.</p>
+<h3>Water tiers</h3>
+<ol>
+  <li>Set the <strong>From</strong> and <strong>To</strong> values (in kL) for each tier</li>
+  <li>Enter the <strong>rate per kL</strong> for that band</li>
+  <li>Leave the <strong>To</strong> field of the last tier blank — it covers everything above</li>
+  <li>Click <strong>Add tier</strong> to add more bands if needed</li>
+  <li>Click <strong>Save tariffs</strong> when done</li>
+</ol>
+<p>Example (City of Cape Town style):</p>
+<table>
+  <tr><th>From</th><th>To</th><th>Rate</th></tr>
+  <tr><td>0 kL</td><td>6 kL</td><td>R 0.00 (free allocation)</td></tr>
+  <tr><td>6 kL</td><td>10 kL</td><td>R 18.50</td></tr>
+  <tr><td>10 kL</td><td>15 kL</td><td>R 27.00</td></tr>
+  <tr><td>15 kL</td><td>—</td><td>R 36.00</td></tr>
+</table>
+<h3>Electricity tiers</h3>
+<p>Same structure for electricity (kWh per month). There is also an optional <strong>fixed monthly charge</strong> field for the network/service access fee on your bill.</p>
+<blockquote>Tariff rates are used for estimates between billing periods. Your actual monthly bill (entered in the Bills tab) always takes priority in the cost chart.</blockquote>
+<hr>
+
+<h2>Bills tab</h2>
+<p>After you receive your monthly statement, log the actual billed amounts here.</p>
+<ol>
+  <li>Select the <strong>month</strong> the bill covers</li>
+  <li>Enter the <strong>water bill amount</strong> in Rand</li>
+  <li>Enter the <strong>electricity bill amount</strong> in Rand</li>
+  <li>Click <strong>Save bill</strong></li>
+</ol>
+<p>Billed amounts override tariff estimates for that month in all charts and metrics.</p>
+<hr>
+
+<h2>Dashboard</h2>
+<p>Four sections, in order of priority:</p>
+<h3>Alerts</h3>
+<p>Once you have at least 4 readings, the app compares your most recent interval against your recent rolling average:</p>
+<table>
+  <tr><th>Threshold</th><th>Alert</th></tr>
+  <tr><td>More than 40% above average</td><td>🔴 Red — spike detected</td></tr>
+  <tr><td>20–40% above average</td><td>🟡 Amber — above normal</td></tr>
+  <tr><td>More than 20% below average</td><td>🟢 Green — usage down</td></tr>
+  <tr><td>Within 20% either way</td><td>🟢 Green — all normal</td></tr>
+</table>
+<h3>Latest reading</h3>
+<p>Metric cards showing your most recent interval's water and electricity usage, plus estimated costs from your tariff tiers.</p>
+<h3>Month-over-month usage</h3>
+<p>Bar chart (water) and dashed line (electricity) showing usage per month. Useful for spotting seasonal patterns.</p>
+<h3>Cost over time</h3>
+<p>Line chart of monthly costs. Months with an actual bill show the real amount; other months show tariff estimates.</p>
+<hr>
+
+<h2>History tab</h2>
+<h3>Reading history</h3>
+<p>Every reading you've entered, newest first. Each entry shows meter values and the usage since the previous reading in brackets — e.g. <code>(+4.2)</code> for water or <code>(+312)</code> for electricity.</p>
+<h3>Backup &amp; Restore</h3>
+<table>
+  <tr><th>Button</th><th>What it does</th></tr>
+  <tr><td>Export full backup (.json)</td><td>Downloads all readings, bills, and tariff settings. Use for regular backups and restoring on a new device.</td></tr>
+  <tr><td>Export as spreadsheet (.csv)</td><td>Downloads readings with calculated usage and cost columns. Opens in Numbers or Excel.</td></tr>
+  <tr><td>Import backup (.json)</td><td>Restores a previous JSON backup. Asks for confirmation before overwriting.</td></tr>
+</table>
+<h3>Import from Excel</h3>
+<p>Import years of historical readings from your existing spreadsheet.</p>
+<p><strong>Reading sheets</strong> (electricity and water) must have these columns:</p>
+<table>
+  <tr><th>Column</th><th>Description</th></tr>
+  <tr><td><code>Date</code></td><td>The date the reading was taken</td></tr>
+  <tr><td><code>Meter Reading</code></td><td>The actual number on the meter dial</td></tr>
+</table>
+<p>Other columns (Days, Usage, Daily Average) are ignored.</p>
+<p><strong>Bills sheet</strong> must have these columns:</p>
+<table>
+  <tr><th>Column</th><th>Description</th></tr>
+  <tr><td><code>Bill Month</code></td><td>The month the bill covers</td></tr>
+  <tr><td><code>Water</code></td><td>Water portion of the bill in Rand</td></tr>
+  <tr><td><code>Electricity</code></td><td>Electricity portion in Rand</td></tr>
+</table>
+<p>Other columns (Rates, Refuse, Late fees, payment dates) are ignored.</p>
+<p><strong>Supported date formats:</strong> <code>dd-mmm-yy</code>, <code>dd-mmm-yyyy</code>, <code>mm/dd/yyyy</code>, and Excel internal serial numbers — all handled automatically.</p>
+<p><strong>To import:</strong></p>
+<ol>
+  <li>Enter the exact names of your three sheet tabs (case-sensitive)</li>
+  <li>Tap <strong>Choose Excel file</strong> and select your .xlsx file</li>
+  <li>The app imports and shows a summary with the date range</li>
+</ol>
+<p>Imported dates overwrite existing readings. Tariff settings are not affected.</p>
+<hr>
+
+<h2>Password</h2>
+<p>The default password is <code>UtilityTracker1</code>. To change it:</p>
+<ol>
+  <li>Go to <a href="https://emn178.github.io/online-tools/sha256.html" target="_blank">emn178.github.io/online-tools/sha256.html</a></li>
+  <li>Type your new password and copy the SHA-256 hash</li>
+  <li>Open <code>index.html</code> in a text editor, find the line <code>const PASSWORD_HASH = '...'</code> and replace the hash</li>
+  <li>Re-upload to GitHub</li>
+</ol>
+<blockquote>Use a password of at least 12 characters with mixed case and a number — e.g. <code>Sandton@Meter24</code></blockquote>
+<hr>
+
+<h2>Data &amp; Privacy</h2>
+<p>All data is stored in your browser's local storage — it never leaves your device.</p>
+<ul>
+  <li>✅ Works offline after the first load</li>
+  <li>✅ No account or login required</li>
+  <li>⚠️ Clearing browser data or cache will erase your readings — export a backup regularly</li>
+  <li>⚠️ Data does not sync automatically between devices</li>
+</ul>
+<hr>
+
+<h2>Tips</h2>
+<ul>
+  <li><strong>Set your tariffs first</strong> — do this before entering readings so cost estimates are available from the start</li>
+  <li><strong>Log your bill the day it arrives</strong> — the sooner you enter it, the more accurate the cost chart</li>
+  <li><strong>Export a backup monthly</strong> — use the JSON export in the History tab and save it to iCloud or your Mac</li>
+  <li><strong>Investigate red alerts promptly</strong> — a water spike can indicate a leak; an electricity spike might point to a geyser fault</li>
+</ul>
+</div>`;
+
+let helpVisible = false;
+let lastActivePage = 'dashboard';
+let lastActiveTab = null;
+
+function showHelp() {
+  const panel = document.getElementById('help-panel');
+  const appDiv = document.querySelector('.app');
+  helpVisible = true;
+  document.getElementById('help-content').innerHTML = HELP_HTML;
+  panel.style.display = 'block';
+  appDiv.style.display = 'none';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('help-tab').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function hideHelp() {
+  const panel = document.getElementById('help-panel');
+  const appDiv = document.querySelector('.app');
+  helpVisible = false;
+  panel.style.display = 'none';
+  appDiv.style.display = 'block';
+}
+
+// Patch showPage to hide help panel when switching tabs
+const _origShowPage = showPage;
+function showPage(id, btn) {
+  hideHelp();
+  _origShowPage(id, btn);
+}
+</script>
+
 <!-- ═══ PASSWORD GATE ═══════════════════════════════════════════════════════
   To change your password:
     1. Go to https://emn178.github.io/online-tools/sha256.html
     2. Type your new password and copy the SHA-256 hash
     3. Replace the PASSWORD_HASH value below with your new hash
     4. The default password is:  UtilityTracker1
-  PASSWORD and hash changed on 4th May 2026
 ════════════════════════════════════════════════════════════════════════════ -->
 <style>
   #gate {
@@ -786,8 +1273,7 @@ refreshDashboard();
 <script>
   // SHA-256 hash of the password. Default password: UtilityTracker1
   // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
-  // Changed on 4th May 2026
-  const PASSWORD_HASH = '03d37f7a24212c417a38d649d0c7e197ccdb21313619838cba9f58414eafc624';
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
   const SESSION_KEY = 'ut_auth';
 
   async function sha256(str) {

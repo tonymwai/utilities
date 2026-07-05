@@ -1,16 +1,17 @@
 # 💧⚡ Utility Tracker
 
-A lightweight, mobile-friendly web app for tracking your weekly water and electricity meter readings, monitoring usage trends, and keeping an eye on costs — all in a single HTML file with no server, no login, and no ads.
+A lightweight, mobile-friendly web app for tracking your water and electricity meter readings, monitoring usage trends, and keeping an eye on costs — all in a single HTML file with no server, no login, and no ads.
 
 ---
 
 ## Features
 
-- **Weekly meter readings** — log water (kL) and electricity (kWh) readings each week
+- **Meter readings on any date** — log readings as often or as infrequently as you like; the app calculates usage from consecutive readings regardless of the interval
 - **Tiered tariff calculator** — configure your municipality's tiered rate structure; costs are calculated accurately across each band
 - **Monthly bills log** — record your actual billed amounts; these take priority over estimates in the cost chart
 - **Spike alerts** — the dashboard flags unusual usage (20–40%+ above your recent average) so you can investigate early
 - **Trends dashboard** — month-over-month usage chart and cost-over-time line graph
+- **Excel importer** — import years of historical readings and bills directly from your existing spreadsheet
 - **South African Rand (R)** — all costs displayed in ZAR with local number formatting
 - **Dark mode** — automatically follows your device's system preference
 - **Offline capable** — once loaded, works without an internet connection
@@ -42,9 +43,9 @@ Download `utility-tracker.html` and open it directly in any browser on your comp
 
 ## How to Use
 
-### Record tab — log your weekly readings
+### Record tab — log your meter readings
 
-Enter your meter readings once a week, ideally on the same day each week for consistent comparisons.
+Enter your meter readings whenever you take them — weekly is ideal for accurate comparisons, but any frequency works. The app calculates usage as the difference between consecutive readings, regardless of how many days apart they are.
 
 | Field | What to enter |
 |---|---|
@@ -118,7 +119,7 @@ The dashboard has four sections, in order of priority:
 | More than 20% below average | Green — usage down |
 | Within 20% either way | Green — all normal |
 
-**This week** — four metric cards showing your most recent week's water usage (kL), electricity usage (kWh), and the estimated cost of each based on your tariff tiers.
+**Latest reading** — four metric cards showing your most recent reading interval's water usage (kL), electricity usage (kWh), and the estimated cost of each based on your tariff tiers.
 
 **Month-over-month usage** — a bar/line chart showing water (bars, left axis) and electricity (dashed line, right axis) usage for each month. Useful for spotting seasonal patterns.
 
@@ -126,9 +127,86 @@ The dashboard has four sections, in order of priority:
 
 ---
 
-### History tab — full reading log
+### History tab — reading log, backup, and import
 
-A scrollable list of every reading you've entered, newest first. Each entry shows the meter values and the usage since the previous reading in brackets — e.g. `(+4.2)` for water or `(+312)` for electricity.
+The History tab has three sections:
+
+**Reading history** — a scrollable list of every reading you've entered, newest first. Each entry shows the meter values and the usage since the previous reading in brackets — e.g. `(+4.2)` for water or `(+312)` for electricity.
+
+**Backup & Restore** — export and import your data:
+
+| Button | What it does |
+|---|---|
+| Export full backup (.json) | Downloads all readings, bills, and tariff settings as a JSON file. Use this for regular backups and to restore on a new device. |
+| Export readings as spreadsheet (.csv) | Downloads readings with calculated usage and cost columns, plus a bills section. Opens in Numbers or Excel. |
+| Import backup (.json) | Restores a previous JSON backup. Asks for confirmation before overwriting current data. |
+
+**Import from Excel** — import years of historical readings from your existing spreadsheet. See the full instructions in the next section.
+
+---
+
+### Importing historical data from Excel
+
+If you have existing meter readings in an Excel spreadsheet, you can import them directly into the app — no manual re-entry required.
+
+#### What the importer expects
+
+Your spreadsheet must have three separate worksheets:
+
+**Electricity and Water reading sheets** — each must have at least these two columns (column names are not case-sensitive):
+
+| Column | Description |
+|---|---|
+| `Date` | The date the reading was taken |
+| `Meter Reading` | The actual number shown on the meter dial |
+
+Other columns in your sheet (Days, Usage, Daily Average, etc.) are ignored — the app recalculates these itself.
+
+**Bills sheet** — must have at least these columns:
+
+| Column | Description |
+|---|---|
+| `Bill Month` | The month the bill covers |
+| `Water` | The water portion of the bill in Rand |
+| `Electricity` | The electricity portion in Rand |
+
+Other columns (Municipal Rates, Refuse, Late payment fee, payment dates, etc.) are ignored.
+
+#### Supported date formats
+
+The importer handles all of the following automatically:
+
+- `dd-mmm-yy` — e.g. `15-Jan-22`
+- `dd-mmm-yyyy` — e.g. `15-Jan-2022`
+- `mm/dd/yyyy` — e.g. `01/15/2022`
+- Excel internal date serial numbers (the actual format Excel stores dates in)
+
+#### How to import
+
+1. Open the app and go to the **History** tab
+2. Scroll to the **Import from Excel** card
+3. Type in the exact names of your three sheet tabs as they appear in Excel (they are case-sensitive — `Electricity` is not the same as `electricity`)
+4. Tap **Choose Excel file** and select your `.xlsx` file
+5. The app imports everything and shows a summary, e.g.:
+   > ✓ Imported: 156 electricity readings, 156 water readings, 38 bills.
+6. The date range of imported data is shown below the summary
+
+If a sheet name is not found, the app will list the sheet names it did find in your file so you can correct the spelling.
+
+#### How imported data is merged
+
+- Dates that already exist in the app are **overwritten** by the imported reading
+- Dates in the import that are not yet in the app are **added**
+- Bills are merged the same way — imported months overwrite existing ones
+- Your tariff settings are not affected by the import
+
+#### After importing
+
+The dashboard will immediately reflect your full history. With three or more years of data you will see:
+
+- Accurate seasonal patterns in the usage chart
+- Meaningful spike alert baselines (based on your real historical average)
+- A full cost-over-time chart for every month you have bill data
 
 ---
 
