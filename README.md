@@ -1,6 +1,6 @@
 # 💧⚡ Utility Tracker
 
-A lightweight, mobile-friendly web app for tracking your water and electricity meter readings, monitoring usage trends, and keeping an eye on costs — all in a single HTML file with no server, no login, and no ads.
+A lightweight, mobile-friendly web app for tracking your water and electricity meter readings, monitoring usage trends, and keeping an eye on costs — all in a single HTML file with no server, no ads, and no account registration required.
 
 ---
 
@@ -110,7 +110,7 @@ Billed amounts override tariff estimates for that month in all charts and metric
 
 The dashboard has four sections, in order of priority:
 
-**Alerts** — shown at the top. Once you have at least four weeks of readings, the app compares your most recent week against your four-week rolling average:
+**Alerts** — shown at the top. Once you have at least five readings (which produces four intervals to compare against), the app compares your most recent interval against the rolling average of the four intervals immediately before it:
 
 | Threshold | Alert type |
 |---|---|
@@ -224,7 +224,7 @@ Once unlocked, the app stays unlocked for the rest of that browser session. Clos
 
 1. Go to **[emn178.github.io/online-tools/sha256.html](https://emn178.github.io/online-tools/sha256.html)**
 2. Type your new password into the input box and copy the SHA-256 hash it generates
-3. Open `index.html` in a text editor and find this line near the bottom of the file:
+3. Open the file in a text editor (it will be named `utility-tracker.html` if downloaded, or `index.html` if already uploaded to GitHub) and find this line near the bottom:
    ```
    const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
    ```
@@ -251,8 +251,8 @@ This is client-side password protection — suitable for keeping casual visitors
 
 All data is stored in your browser's **local storage** — it never leaves your device. This means:
 
-- ✅ Works offline after the first load
-- ✅ No account or login required
+- ✅ Works offline after the first load, except for chart rendering and Excel import which require an internet connection to load their libraries
+- ✅ No account registration required — access is protected by a password you set
 - ⚠️ Clearing your browser data or cache will erase your readings
 - ⚠️ Data does not sync automatically between devices
 
@@ -262,9 +262,9 @@ All data is stored in your browser's **local storage** — it never leaves your 
 
 ## Tips
 
-- **Consistency is key** — try to read your meters on the same day each week (e.g. every Sunday morning) for the most accurate week-over-week comparisons
 - **Set your tariffs first** — do this before you start entering readings so cost estimates are available from the start
 - **Log your bill the day it arrives** — the sooner you enter it, the more accurate your cost chart becomes
+- **Export a backup regularly** — use the JSON export in the History tab and save it somewhere safe
 - **Investigate spikes promptly** — a red water alert could indicate a leak; a red electricity alert might point to a geyser fault or an appliance left on
 
 ---

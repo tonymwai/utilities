@@ -1079,7 +1079,7 @@ const HELP_HTML = `<div class="help-body">
 <h2>Dashboard</h2>
 <p>Four sections, in order of priority:</p>
 <h3>Alerts</h3>
-<p>Once you have at least 4 readings, the app compares your most recent interval against your recent rolling average:</p>
+<p>Once you have at least 5 readings (which produces 4 intervals to compare against), the app compares your most recent interval against the rolling average of the 4 intervals immediately before it:</p>
 <table>
   <tr><th>Threshold</th><th>Alert</th></tr>
   <tr><td>More than 40% above average</td><td>🔴 Red — spike detected</td></tr>
@@ -1102,7 +1102,7 @@ const HELP_HTML = `<div class="help-body">
 <table>
   <tr><th>Button</th><th>What it does</th></tr>
   <tr><td>Export full backup (.json)</td><td>Downloads all readings, bills, and tariff settings. Use for regular backups and restoring on a new device.</td></tr>
-  <tr><td>Export as spreadsheet (.csv)</td><td>Downloads readings with calculated usage and cost columns. Opens in Numbers or Excel.</td></tr>
+  <tr><td>Export readings as spreadsheet (.csv)</td><td>Downloads readings with calculated usage and cost columns. Opens in Numbers or Excel.</td></tr>
   <tr><td>Import backup (.json)</td><td>Restores a previous JSON backup. Asks for confirmation before overwriting.</td></tr>
 </table>
 <h3>Import from Excel</h3>
@@ -1137,7 +1137,7 @@ const HELP_HTML = `<div class="help-body">
 <ol>
   <li>Go to <a href="https://emn178.github.io/online-tools/sha256.html" target="_blank">emn178.github.io/online-tools/sha256.html</a></li>
   <li>Type your new password and copy the SHA-256 hash</li>
-  <li>Open <code>index.html</code> in a text editor, find the line <code>const PASSWORD_HASH = '...'</code> and replace the hash</li>
+  <li>Open the file in a text editor (it will be named <code>utility-tracker.html</code> if downloaded, or <code>index.html</code> if already uploaded to GitHub), find the line <code>const PASSWORD_HASH = '...'</code> and replace the hash</li>
   <li>Re-upload to GitHub</li>
 </ol>
 <blockquote>Use a password of at least 12 characters with mixed case and a number — e.g. <code>Sandton@Meter24</code></blockquote>
@@ -1146,8 +1146,8 @@ const HELP_HTML = `<div class="help-body">
 <h2>Data &amp; Privacy</h2>
 <p>All data is stored in your browser's local storage — it never leaves your device.</p>
 <ul>
-  <li>✅ Works offline after the first load</li>
-  <li>✅ No account or login required</li>
+  <li>✅ Works offline after the first load, except for chart rendering and Excel import which require an internet connection to load their libraries</li>
+  <li>✅ No account registration required — access is protected by a password you set</li>
   <li>⚠️ Clearing browser data or cache will erase your readings — export a backup regularly</li>
   <li>⚠️ Data does not sync automatically between devices</li>
 </ul>
@@ -1157,7 +1157,7 @@ const HELP_HTML = `<div class="help-body">
 <ul>
   <li><strong>Set your tariffs first</strong> — do this before entering readings so cost estimates are available from the start</li>
   <li><strong>Log your bill the day it arrives</strong> — the sooner you enter it, the more accurate the cost chart</li>
-  <li><strong>Export a backup monthly</strong> — use the JSON export in the History tab and save it to iCloud or your Mac</li>
+  <li><strong>Export a backup monthly</strong> — use the JSON export in the History tab and save it somewhere safe</li>
   <li><strong>Investigate red alerts promptly</strong> — a water spike can indicate a leak; an electricity spike might point to a geyser fault</li>
 </ul>
 </div>`;
@@ -1189,7 +1189,6 @@ function hideHelp() {
     2. Type your new password and copy the SHA-256 hash
     3. Replace the PASSWORD_HASH value below with your new hash
     4. The default password is:  UtilityTracker1
-  PASSWORD and hash changed on 6th July 2026
 ════════════════════════════════════════════════════════════════════════════ -->
 <style>
   #gate {
@@ -1270,8 +1269,7 @@ function hideHelp() {
 <script>
   // SHA-256 hash of the password. Default password: UtilityTracker1
   // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
-  // Changed on 6th July 2026
-  const PASSWORD_HASH = '03d37f7a24212c417a38d649d0c7e197ccdb21313619838cba9f58414eafc624';
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
   const SESSION_KEY = 'ut_auth';
 
   async function sha256(str) {
