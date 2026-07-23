@@ -453,16 +453,28 @@ function calcTieredCost(usage, tiers, fixed = 0) {
 }
 
 // ─── Derived data ────────────────────────────────────────────────────────────
+function daysBetween(dateA, dateB) {
+  // Returns number of calendar days between two yyyy-mm-dd strings
+  const msPerDay = 1000 * 60 * 60 * 24;
+  return Math.round((new Date(dateB) - new Date(dateA)) / msPerDay);
+}
+
 function getWeeklyUsage() {
   const sorted = readings.filter(r => r.water != null || r.elec != null)
                          .sort((a,b) => a.date.localeCompare(b.date));
   if (sorted.length < 2) return [];
   return sorted.slice(1).map((r, i) => {
     const prev = sorted[i];
+    const days = daysBetween(prev.date, r.date);
+    const waterUsed = r.water != null && prev.water != null ? +(r.water - prev.water).toFixed(2) : null;
+    const elecUsed  = r.elec  != null && prev.elec  != null ? +(r.elec  - prev.elec ).toFixed(1)  : null;
     return {
       date: r.date,
-      waterUsed: r.water != null && prev.water != null ? +(r.water - prev.water).toFixed(2) : null,
-      elecUsed:  r.elec  != null && prev.elec  != null ? +(r.elec  - prev.elec ).toFixed(1)  : null
+      days,
+      waterUsed,
+      elecUsed,
+      waterPerDay: waterUsed != null && days > 0 ? +(waterUsed / days).toFixed(3) : null,
+      elecPerDay:  elecUsed  != null && days > 0 ? +(elecUsed  / days).toFixed(2) : null
     };
   });
 }
@@ -500,36 +512,36 @@ function renderAlerts() {
   const weekly = getWeeklyUsage();
   const container = document.getElementById('alerts-container');
   if (weekly.length < 4) {
-    container.innerHTML = '<div class="alert-card ok"><div class="alert-title ok">Not enough data yet</div><div class="alert-desc ok">Add at least 4 readings to see spike alerts.</div></div>';
+    container.innerHTML = '<div class="alert-card ok"><div class="alert-title ok">Not enough data yet</div><div class="alert-desc ok">Add at least 5 readings to see spike alerts.</div></div>';
     return;
   }
   const recent = weekly[weekly.length - 1];
   const prev = weekly.slice(-5, -1);
   const alerts = [];
 
-  if (recent.waterUsed != null) {
-    const prevWater = prev.filter(w => w.waterUsed != null);
+  if (recent.waterPerDay != null) {
+    const prevWater = prev.filter(w => w.waterPerDay != null);
     if (prevWater.length > 0) {
-      const avg = prevWater.reduce((s,w) => s + w.waterUsed, 0) / prevWater.length;
-      const pct = avg > 0 ? (recent.waterUsed - avg) / avg * 100 : 0;
-      if (pct > 40) alerts.push({ type:'danger', title:'Water usage spike', desc:`Latest: ${recent.waterUsed} kL — ${Math.round(pct)}% above your recent average of ${avg.toFixed(1)} kL.` });
-      else if (pct > 20) alerts.push({ type:'warning', title:'Water usage above normal', desc:`Up ${Math.round(pct)}% vs recent average (${avg.toFixed(1)} kL). Worth investigating.` });
-      else if (pct < -20) alerts.push({ type:'ok', title:'Water usage down', desc:`${Math.abs(Math.round(pct))}% below your recent average — good going!` });
+      const avgPerDay = prevWater.reduce((s,w) => s + w.waterPerDay, 0) / prevWater.length;
+      const pct = avgPerDay > 0 ? (recent.waterPerDay - avgPerDay) / avgPerDay * 100 : 0;
+      if (pct > 40) alerts.push({ type:'danger', title:'Water usage spike', desc:`Latest: ${recent.waterPerDay.toFixed(2)} kL/day over ${recent.days} days — ${Math.round(pct)}% above your recent daily average of ${avgPerDay.toFixed(2)} kL/day.` });
+      else if (pct > 20) alerts.push({ type:'warning', title:'Water usage above normal', desc:`Latest: ${recent.waterPerDay.toFixed(2)} kL/day over ${recent.days} days — up ${Math.round(pct)}% vs recent daily average of ${avgPerDay.toFixed(2)} kL/day. Worth investigating.` });
+      else if (pct < -20) alerts.push({ type:'ok', title:'Water usage down', desc:`Latest: ${recent.waterPerDay.toFixed(2)} kL/day — ${Math.abs(Math.round(pct))}% below your recent daily average of ${avgPerDay.toFixed(2)} kL/day. Good going!` });
     }
   }
 
-  if (recent.elecUsed != null) {
-    const prevElec = prev.filter(w => w.elecUsed != null);
+  if (recent.elecPerDay != null) {
+    const prevElec = prev.filter(w => w.elecPerDay != null);
     if (prevElec.length > 0) {
-      const avg = prevElec.reduce((s,w) => s + w.elecUsed, 0) / prevElec.length;
-      const pct = avg > 0 ? (recent.elecUsed - avg) / avg * 100 : 0;
-      if (pct > 40) alerts.push({ type:'danger', title:'Electricity spike', desc:`Latest: ${recent.elecUsed} kWh — ${Math.round(pct)}% above recent average of ${avg.toFixed(0)} kWh.` });
-      else if (pct > 20) alerts.push({ type:'warning', title:'Electricity above normal', desc:`Up ${Math.round(pct)}% vs recent average of ${avg.toFixed(0)} kWh.` });
-      else if (pct < -20) alerts.push({ type:'ok', title:'Electricity usage down', desc:`${Math.abs(Math.round(pct))}% below recent average.` });
+      const avgPerDay = prevElec.reduce((s,w) => s + w.elecPerDay, 0) / prevElec.length;
+      const pct = avgPerDay > 0 ? (recent.elecPerDay - avgPerDay) / avgPerDay * 100 : 0;
+      if (pct > 40) alerts.push({ type:'danger', title:'Electricity spike', desc:`Latest: ${recent.elecPerDay.toFixed(1)} kWh/day over ${recent.days} days — ${Math.round(pct)}% above your recent daily average of ${avgPerDay.toFixed(1)} kWh/day.` });
+      else if (pct > 20) alerts.push({ type:'warning', title:'Electricity above normal', desc:`Latest: ${recent.elecPerDay.toFixed(1)} kWh/day over ${recent.days} days — up ${Math.round(pct)}% vs recent daily average of ${avgPerDay.toFixed(1)} kWh/day.` });
+      else if (pct < -20) alerts.push({ type:'ok', title:'Electricity usage down', desc:`Latest: ${recent.elecPerDay.toFixed(1)} kWh/day — ${Math.abs(Math.round(pct))}% below your recent daily average of ${avgPerDay.toFixed(1)} kWh/day.` });
     }
   }
 
-  if (alerts.length === 0) alerts.push({ type:'ok', title:'All normal', desc:'Water and electricity are both within normal range for the latest reading.' });
+  if (alerts.length === 0) alerts.push({ type:'ok', title:'All normal', desc:'Water and electricity daily usage are both within normal range for the latest reading.' });
   container.innerHTML = alerts.map(a => `<div class="alert-card ${a.type}"><div class="alert-title ${a.type}">${a.title}</div><div class="alert-desc ${a.type}">${a.desc}</div></div>`).join('');
 }
 
@@ -542,13 +554,25 @@ function renderWeeklyMetrics() {
   }
   const last = weekly[weekly.length - 1];
   const prev = weekly.length > 1 ? weekly[weekly.length - 2] : null;
-  const wDelta = (prev && last.waterUsed != null && prev.waterUsed != null) ? (last.waterUsed - prev.waterUsed).toFixed(1) : null;
-  const eDelta = (prev && last.elecUsed  != null && prev.elecUsed  != null) ? (last.elecUsed  - prev.elecUsed ).toFixed(0)  : null;
+  const wDelta = (prev && last.waterPerDay != null && prev.waterPerDay != null) ? (last.waterPerDay - prev.waterPerDay).toFixed(2) : null;
+  const eDelta = (prev && last.elecPerDay  != null && prev.elecPerDay  != null) ? (last.elecPerDay  - prev.elecPerDay ).toFixed(1) : null;
   const wCost = last.waterUsed != null ? calcTieredCost(last.waterUsed, tariffs.water) : null;
   const eCost = last.elecUsed  != null ? calcTieredCost(last.elecUsed,  tariffs.elec, tariffs.elecFixed) : null;
   const cards = [];
-  if (last.waterUsed != null) cards.push(`<div class="metric"><div class="metric-label">Water used</div><div class="metric-value">${last.waterUsed}</div><div class="metric-sub">kL${wDelta !== null ? ' · ' + (wDelta > 0 ? '+' : '') + wDelta + ' vs prev' : ''}</div></div>`);
-  if (last.elecUsed  != null) cards.push(`<div class="metric"><div class="metric-label">Electricity used</div><div class="metric-value">${last.elecUsed}</div><div class="metric-sub">kWh${eDelta !== null ? ' · ' + (eDelta > 0 ? '+' : '') + eDelta + ' vs prev' : ''}</div></div>`);
+  if (last.waterUsed != null) cards.push(`
+    <div class="metric">
+      <div class="metric-label">Water used</div>
+      <div class="metric-value">${last.waterUsed}</div>
+      <div class="metric-sub">kL over ${last.days} day${last.days !== 1 ? 's' : ''}</div>
+      <div class="metric-sub">${last.waterPerDay != null ? last.waterPerDay.toFixed(2) + ' kL/day' : ''}${wDelta !== null ? ' · ' + (wDelta > 0 ? '+' : '') + wDelta + ' vs prev' : ''}</div>
+    </div>`);
+  if (last.elecUsed != null) cards.push(`
+    <div class="metric">
+      <div class="metric-label">Electricity used</div>
+      <div class="metric-value">${last.elecUsed}</div>
+      <div class="metric-sub">kWh over ${last.days} day${last.days !== 1 ? 's' : ''}</div>
+      <div class="metric-sub">${last.elecPerDay != null ? last.elecPerDay.toFixed(1) + ' kWh/day' : ''}${eDelta !== null ? ' · ' + (eDelta > 0 ? '+' : '') + eDelta + ' vs prev' : ''}</div>
+    </div>`);
   if (wCost != null) cards.push(`<div class="metric"><div class="metric-label">Est. water cost</div><div class="metric-value" style="font-size:18px;">${rand(wCost)}</div><div class="metric-sub">tiered tariff</div></div>`);
   if (eCost != null) cards.push(`<div class="metric"><div class="metric-label">Est. elec cost</div><div class="metric-value" style="font-size:18px;">${rand(eCost)}</div><div class="metric-sub">incl. fixed: ${rand(tariffs.elecFixed)}</div></div>`);
   container.innerHTML = cards.join('');
@@ -1077,7 +1101,7 @@ const HELP_HTML = `<div class="help-body">
 <h2>Dashboard</h2>
 <p>Four sections, in order of priority:</p>
 <h3>Alerts</h3>
-<p>Once you have at least 5 readings (which produces 4 intervals to compare against), the app compares your most recent interval against the rolling average of the 4 intervals immediately before it:</p>
+<p>Once you have at least 5 readings (which produces 4 intervals to compare against), the app compares your most recent interval's <strong>daily average usage</strong> against the rolling average of the 4 intervals immediately before it. Using daily averages means the comparison is fair even if your reading intervals vary in length.</p>
 <table>
   <tr><th>Threshold</th><th>Alert</th></tr>
   <tr><td>More than 40% above average</td><td>🔴 Red — spike detected</td></tr>
@@ -1085,6 +1109,7 @@ const HELP_HTML = `<div class="help-body">
   <tr><td>More than 20% below average</td><td>🟢 Green — usage down</td></tr>
   <tr><td>Within 20% either way</td><td>🟢 Green — all normal</td></tr>
 </table>
+<p>Each alert shows the daily rate for the latest interval, how many days it covers, and the baseline daily average it was compared against — e.g. <em>"Latest: 1.77 kL/day over 6 days — 45% above your recent daily average of 1.22 kL/day."</em></p>
 <h3>Latest reading</h3>
 <p>Metric cards showing your most recent interval's water and electricity usage, plus estimated costs from your tariff tiers.</p>
 <h3>Month-over-month usage</h3>
@@ -1184,7 +1209,6 @@ function hideHelp() {
     2. Type your new password and copy the SHA-256 hash
     3. Replace the PASSWORD_HASH value below with your new hash
     4. The default password is:  UtilityTracker1
-  PASSWORD and hash changed on 11th July 2026
 ════════════════════════════════════════════════════════════════════════════ -->
 <style>
   #gate {
@@ -1265,8 +1289,7 @@ function hideHelp() {
 <script>
   // SHA-256 hash of the password. Default password: UtilityTracker1
   // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
-  // Changed PASSWORD_HASH on 11th July 2026
-  const PASSWORD_HASH = '03d37f7a24212c417a38d649d0c7e197ccdb21313619838cba9f58414eafc624';
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
   const SESSION_KEY = 'ut_auth';
 
   async function sha256(str) {
