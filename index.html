@@ -473,8 +473,8 @@ function getWeeklyUsage() {
       days,
       waterUsed,
       elecUsed,
-      waterPerDay: waterUsed != null && days > 0 ? +(waterUsed / days).toFixed(3) : null,
-      elecPerDay:  elecUsed  != null && days > 0 ? +(elecUsed  / days).toFixed(2) : null
+      waterPerDay: waterUsed != null && days > 0 ? waterUsed / days : null,
+      elecPerDay:  elecUsed  != null && days > 0 ? elecUsed  / days : null
     };
   });
 }
@@ -564,14 +564,14 @@ function renderWeeklyMetrics() {
       <div class="metric-label">Water used</div>
       <div class="metric-value">${last.waterUsed}</div>
       <div class="metric-sub">kL over ${last.days} day${last.days !== 1 ? 's' : ''}</div>
-      <div class="metric-sub">${last.waterPerDay != null ? last.waterPerDay.toFixed(2) + ' kL/day' : ''}${wDelta !== null ? ' · ' + (wDelta > 0 ? '+' : '') + wDelta + ' vs prev' : ''}</div>
+      <div class="metric-sub">${last.waterPerDay != null ? last.waterPerDay.toFixed(2) + ' kL/day' : ''}${wDelta !== null ? ' · ' + (parseFloat(wDelta) > 0 ? '+' : '') + wDelta + ' vs prev' : ''}</div>
     </div>`);
   if (last.elecUsed != null) cards.push(`
     <div class="metric">
       <div class="metric-label">Electricity used</div>
       <div class="metric-value">${last.elecUsed}</div>
       <div class="metric-sub">kWh over ${last.days} day${last.days !== 1 ? 's' : ''}</div>
-      <div class="metric-sub">${last.elecPerDay != null ? last.elecPerDay.toFixed(1) + ' kWh/day' : ''}${eDelta !== null ? ' · ' + (eDelta > 0 ? '+' : '') + eDelta + ' vs prev' : ''}</div>
+      <div class="metric-sub">${last.elecPerDay != null ? last.elecPerDay.toFixed(1) + ' kWh/day' : ''}${eDelta !== null ? ' · ' + (parseFloat(eDelta) > 0 ? '+' : '') + eDelta + ' vs prev' : ''}</div>
     </div>`);
   if (wCost != null) cards.push(`<div class="metric"><div class="metric-label">Est. water cost</div><div class="metric-value" style="font-size:18px;">${rand(wCost)}</div><div class="metric-sub">tiered tariff</div></div>`);
   if (eCost != null) cards.push(`<div class="metric"><div class="metric-label">Est. elec cost</div><div class="metric-value" style="font-size:18px;">${rand(eCost)}</div><div class="metric-sub">incl. fixed: ${rand(tariffs.elecFixed)}</div></div>`);
@@ -588,7 +588,7 @@ function renderTrendChart() {
     data: {
       labels: monthly.map(m => fmtMonth(m[0])),
       datasets: [
-        { label: 'Water (kL)', data: monthly.map(m => m[1].hasWater ? m[1].water : null), backgroundColor: '#B5D4F4', borderColor: '#378ADD', borderWidth: 1, yAxisID: 'y', pointRadius: 3, pointHoverRadius: 5 },
+        { label: 'Water (kL)', data: monthly.map(m => m[1].hasWater ? m[1].water : null), backgroundColor: '#B5D4F4', borderColor: '#378ADD', borderWidth: 1, yAxisID: 'y' },
         { label: 'Elec (kWh)', data: monthly.map(m => m[1].hasElec ? m[1].elec : null), type: 'line', borderColor: '#EF9F27', borderDash: [4,4], backgroundColor: 'rgba(239,159,39,0.08)', tension: 0.3, yAxisID: 'y2', spanGaps: true, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: '#EF9F27' }
       ]
     },
@@ -636,13 +636,24 @@ function renderCostChart() {
     data: {
       labels: allMonths.map(fmtMonth),
       datasets: [
-        { label: 'Water', data: waterCosts, borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', tension: 0.3, spanGaps: true, pointRadius: 4 },
-        { label: 'Electricity', data: elecCosts, borderColor: '#EF9F27', backgroundColor: 'rgba(239,159,39,0.08)', tension: 0.3, borderDash: [5,4], spanGaps: true, pointRadius: 4 }
+        { label: 'Water', data: waterCosts, borderColor: '#378ADD', backgroundColor: 'rgba(55,138,221,0.08)', tension: 0.3, spanGaps: true, pointRadius: 4, pointHoverRadius: 6 },
+        { label: 'Electricity', data: elecCosts, borderColor: '#EF9F27', backgroundColor: 'rgba(239,159,39,0.08)', tension: 0.3, borderDash: [5,4], spanGaps: true, pointRadius: 4, pointHoverRadius: 6 }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              const formatted = v != null ? 'R\u00a0' + v.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+              return ' ' + ctx.dataset.label + ': ' + formatted;
+            }
+          }
+        }
+      },
       scales: {
         x: { ticks: { font: { size: 11 }, autoSkip: false, maxRotation: 45 } },
         y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: v => 'R ' + v.toLocaleString('en-ZA') } }
@@ -1299,8 +1310,7 @@ function hideHelp() {
 <script>
   // SHA-256 hash of the password. Default password: UtilityTracker1
   // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
-  // Customized PASSWORD_HASH on 25th July 2026
-  const PASSWORD_HASH = '03d37f7a24212c417a38d649d0c7e197ccdb21313619838cba9f58414eafc624';
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
   const SESSION_KEY = 'ut_auth';
 
   async function sha256(str) {
