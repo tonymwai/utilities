@@ -71,6 +71,40 @@
   /* PAGES */
   .page { padding: 16px; display: none; }
   .page.active { display: block; }
+
+  /* ── DESKTOP LAYOUT ────────────────────────────────────────────────────── */
+  @media (min-width: 800px) {
+    .app { max-width: 960px; }
+    .tab { font-size: 14px; padding: 16px 12px; }
+
+    /* pages get side padding so content doesn't touch edges */
+    .page { padding: 24px 28px; }
+
+    /* form pages: constrain width so inputs don't stretch absurdly */
+    #page-record .card,
+    #page-bills .card,
+    #page-tariffs .card { max-width: 560px; }
+
+    /* dashboard: side-by-side charts */
+    .dashboard-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .dashboard-charts .section-label { grid-column: span 1; }
+
+    /* taller charts on desktop */
+    .chart-wrap { height: 280px; }
+
+    /* metric grid: 4 columns on desktop */
+    .metric-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+    /* bigger metric values */
+    .metric-value { font-size: 26px; }
+
+    /* help content wider */
+    .help-body { max-width: 800px; }
+    .help-body h2 { font-size: 26px; }
+
+    /* history: two column layout for reading list and backup */
+    .history-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  }
   /* TYPOGRAPHY */
   .section-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: .07em; text-transform: uppercase; margin: 20px 0 10px; }
   .section-label:first-child { margin-top: 4px; }
@@ -176,22 +210,28 @@
     <div class="section-label">Latest reading</div>
     <div class="metric-grid" id="weekly-metrics"></div>
 
-    <div class="section-label">Month-over-month usage</div>
-    <div class="card">
-      <div class="legend">
-        <span><span class="legend-dot" style="background:#378ADD"></span>Water (kL)</span>
-        <span><span class="legend-dot" style="background:#EF9F27;border-left:3px dashed #EF9F27;background:none;width:18px;height:0;border-top:2px dashed #EF9F27"></span>Electricity (kWh)</span>
+    <div class="dashboard-charts">
+      <div>
+        <div class="section-label">Month-over-month usage</div>
+        <div class="card">
+          <div class="legend">
+            <span><span class="legend-dot" style="background:#378ADD"></span>Water (kL)</span>
+            <span><span class="legend-dot" style="background:#EF9F27;border-left:3px dashed #EF9F27;background:none;width:18px;height:0;border-top:2px dashed #EF9F27"></span>Electricity (kWh)</span>
+          </div>
+          <div class="chart-wrap"><canvas id="trendChart" role="img" aria-label="Monthly usage trends for water and electricity"></canvas></div>
+        </div>
       </div>
-      <div class="chart-wrap"><canvas id="trendChart" role="img" aria-label="Monthly usage trends for water and electricity"></canvas></div>
-    </div>
 
-    <div class="section-label">Cost over time</div>
-    <div class="card">
-      <div class="legend">
-        <span><span class="legend-dot" style="background:#378ADD"></span>Water</span>
-        <span><span class="legend-dot" style="background:#EF9F27"></span>Electricity</span>
+      <div>
+        <div class="section-label">Cost over time</div>
+        <div class="card">
+          <div class="legend">
+            <span><span class="legend-dot" style="background:#378ADD"></span>Water</span>
+            <span><span class="legend-dot" style="background:#EF9F27"></span>Electricity</span>
+          </div>
+          <div class="chart-wrap"><canvas id="costChart" role="img" aria-label="Monthly cost for water and electricity in Rand"></canvas></div>
+        </div>
       </div>
-      <div class="chart-wrap"><canvas id="costChart" role="img" aria-label="Monthly cost for water and electricity in Rand"></canvas></div>
     </div>
   </div>
 
@@ -276,48 +316,52 @@
 
   <!-- ═══ HISTORY ═══ -->
   <div class="page" id="page-history">
-    <div class="section-label">Backup &amp; Restore</div>
-    <div class="card">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Export your data to your Mac's Downloads folder. Import restores a previous JSON backup — your existing data will be replaced.</p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button class="btn-primary" onclick="exportJSON()">⬇ Export full backup (.json)</button>
-        <button class="btn-primary" style="background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);" onclick="exportCSV()">⬇ Export readings as spreadsheet (.csv)</button>
-        <hr class="divider" style="margin:2px 0;" />
-        <label class="btn-primary" style="background:var(--surface);color:var(--text2);border:0.5px solid var(--border2);text-align:center;cursor:pointer;display:block;">
-          ⬆ Import backup (.json)
-          <input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" />
-        </label>
+    <div class="history-cols">
+      <div>
+        <div class="section-label">Backup &amp; Restore</div>
+        <div class="card">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Export your data to your Mac's Downloads folder. Import restores a previous JSON backup — your existing data will be replaced.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn-primary" onclick="exportJSON()">⬇ Export full backup (.json)</button>
+            <button class="btn-primary" style="background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);" onclick="exportCSV()">⬇ Export readings as spreadsheet (.csv)</button>
+            <hr class="divider" style="margin:2px 0;" />
+            <label class="btn-primary" style="background:var(--surface);color:var(--text2);border:0.5px solid var(--border2);text-align:center;cursor:pointer;display:block;">
+              ⬆ Import backup (.json)
+              <input type="file" accept=".json" onchange="importJSON(event)" style="display:none;" />
+            </label>
+          </div>
+          <div id="backup-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
+        </div>
+
+        <div class="section-label">Import from Excel</div>
+        <div class="card" id="xl-card">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Import your historical readings and bills from your existing Excel spreadsheet. Dates already in the app will be overwritten by imported data.</p>
+          <div class="field">
+            <label>Electricity sheet name</label>
+            <input type="text" id="xl-elec-sheet" placeholder="e.g. Electricity" />
+          </div>
+          <div class="field">
+            <label>Water sheet name</label>
+            <input type="text" id="xl-water-sheet" placeholder="e.g. Water" />
+          </div>
+          <div class="field">
+            <label>Bills sheet name</label>
+            <input type="text" id="xl-bills-sheet" placeholder="e.g. Bills" />
+          </div>
+          <label class="btn-primary" style="background:var(--text);color:var(--surface);text-align:center;cursor:pointer;display:block;margin-top:4px;">
+            📂 Choose Excel file (.xlsx)
+            <input type="file" accept=".xlsx,.xls" onchange="importExcel(event)" style="display:none;" />
+          </label>
+          <div id="xl-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
+          <div id="xl-preview" style="margin-top:12px;"></div>
+        </div>
       </div>
-      <div id="backup-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
+
+      <div>
+        <div class="section-label">Reading history</div>
+        <div class="card" id="reading-history"></div>
+      </div>
     </div>
-
-    <div class="section-label">Import from Excel</div>
-    <div class="card" id="xl-card">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Import your historical readings and bills from your existing Excel spreadsheet. Dates already in the app will be overwritten by imported data.</p>
-
-      <div class="field">
-        <label>Electricity sheet name</label>
-        <input type="text" id="xl-elec-sheet" placeholder="e.g. Electricity" />
-      </div>
-      <div class="field">
-        <label>Water sheet name</label>
-        <input type="text" id="xl-water-sheet" placeholder="e.g. Water" />
-      </div>
-      <div class="field">
-        <label>Bills sheet name</label>
-        <input type="text" id="xl-bills-sheet" placeholder="e.g. Bills" />
-      </div>
-
-      <label class="btn-primary" style="background:var(--text);color:var(--surface);text-align:center;cursor:pointer;display:block;margin-top:4px;">
-        📂 Choose Excel file (.xlsx)
-        <input type="file" accept=".xlsx,.xls" onchange="importExcel(event)" style="display:none;" />
-      </label>
-      <div id="xl-msg" style="font-size:13px;margin-top:10px;min-height:18px;"></div>
-      <div id="xl-preview" style="margin-top:12px;"></div>
-    </div>
-
-    <div class="section-label">Reading history</div>
-    <div class="card" id="reading-history"></div>
   </div>
   <!-- ═══ HELP PANEL ═══ -->
   <div id="help-panel" style="display:none;">
@@ -1312,8 +1356,7 @@ function hideHelp() {
 <script>
   // SHA-256 hash of the password. Default password: UtilityTracker1
   // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
-  // Customized PASSWORD_HASH on 25th July 2026
-  const PASSWORD_HASH = '03d37f7a24212c417a38d649d0c7e197ccdb21313619838cba9f58414eafc624';
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
   const SESSION_KEY = 'ut_auth';
 
   async function sha256(str) {
