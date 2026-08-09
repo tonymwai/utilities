@@ -707,6 +707,24 @@ function renderCostChart() {
   });
 }
 
+// ─── Bills ───────────────────────────────────────────────────────────────────
+function saveBill() {
+  const month = document.getElementById('billMonth').value;
+  const water = parseFloat(document.getElementById('waterBill').value);
+  const elec  = parseFloat(document.getElementById('elecBill').value);
+  if (!month) { toast('Please select a month'); return; }
+  if (isNaN(water) && isNaN(elec)) { toast('Enter at least one bill amount'); return; }
+  const existing = bills.findIndex(b => b.month === month);
+  const entry = { month, water: isNaN(water) ? null : water, elec: isNaN(elec) ? null : elec };
+  if (existing >= 0) bills[existing] = entry;
+  else bills.push(entry);
+  persist();
+  document.getElementById('waterBill').value = '';
+  document.getElementById('elecBill').value = '';
+  renderBillHistory();
+  toast('Bill saved');
+}
+
 function renderHistory() {
   const sorted = [...readings].sort((a,b) => b.date.localeCompare(a.date));
   const usageByDate = Object.fromEntries(getWeeklyUsage().map(w => [w.date, w]));
@@ -1353,8 +1371,7 @@ function hideHelp() {
 <script>
   // SHA-256 hash of the password. Default password: UtilityTracker1
   // To change: hash your new password at https://emn178.github.io/online-tools/sha256.html
-  // Customized PASSWORD_HASH on 4th August 2026
-  const PASSWORD_HASH = '03d37f7a24212c417a38d649d0c7e197ccdb21313619838cba9f58414eafc624';
+  const PASSWORD_HASH = '47d7938587104229967ed538ac8586a62dbf9d46a2783e4bfb2506778bf8e586';
   const SESSION_KEY = 'ut_auth';
 
   async function sha256(str) {
